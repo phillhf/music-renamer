@@ -12,22 +12,25 @@ from dataclasses import dataclass
 from mutagen.flac import FLAC
 from mutagen.mp3 import MP3
 
+from .i18n import t
+from .job import job
 from .tags import EXTENSIONS, open_audio, read_tags
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS files (
     path TEXT PRIMARY KEY, size INTEGER, mtime REAL,
     duration REAL, bitrate INTEGER,
     artist TEXT, title TEXT, album TEXT, albumartist TEXT, year TEXT, genre TEXT, track TEXT,
     has_cover INTEGER, has_lyrics INTEGER,
-    audio_start INTEGER, audio_size INTEGER, audio_hash TEXT, fingerprint TEXT, error TEXT
+    audio_start INTEGER, audio_size INTEGER, audio_hash TEXT, error TEXT
 );
 CREATE TABLE IF NOT EXISTS lookups (key TEXT PRIMARY KEY, result TEXT);
 """
 TRACK_COLUMNS = ("path", "size", "duration", "bitrate", "artist", "title", "album", "albumartist",
                  "year", "genre", "track", "has_cover", "has_lyrics", "audio_start", "audio_size",
-                 "audio_hash", "fingerprint")
+                 "audio_hash")
+KEY_SAMPLE = 1024 * 1024
 READ_COLUMNS = ("duration", "bitrate", "artist", "title", "album", "albumartist", "year", "genre",
                 "track", "has_cover", "has_lyrics", "audio_start", "audio_size", "audio_hash")
 
@@ -50,7 +53,6 @@ class Track:
     audio_start: int
     audio_size: int
     audio_hash: str
-    fingerprint: str
 
     @property
     def tag_count(self):
@@ -117,6 +119,13 @@ def hash_audio(path, start, length):
     return digest.hexdigest()
 
 
+def audio_key(path):
+    """Kennung des Audioinhalts; bleibt beim Umbenennen und bei MP3 auch beim Taggen gleich."""
+    is_mp3 = path.lower().endswith(".mp3")
+    start, length = audio_range(path) if is_mp3 else (0, os.path.getsize(path))
+    return f"{length}:{hash_audio(path, start, min(length, KEY_SAMPLE))}"
+
+
 def read_file(path):
     audio = open_audio(path)
     values = read_tags(audio)
@@ -138,7 +147,9 @@ def scan(root, db, exclude=None, progress=print):
              db.execute("SELECT path, size, mtime FROM files WHERE path LIKE ? ESCAPE '\\'",
                         (_prefix(root),))}
     seen, errors, read = set(), [], 0
-    for path in find_audio(root, exclude):
+    paths = list(find_audio(root, exclude))
+    for number, path in enumerate(paths, 1):
+        job.step(number, len(paths), t("Sammlung lesen"))
         seen.add(path)
         try:
             stat = os.stat(path)

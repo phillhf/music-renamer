@@ -11,6 +11,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from .fingerprint import find_groups
+from .i18n import t
+from .job import job
 from .library import hash_audio
 from .names import COPY_SUFFIX, identify, normalize
 
@@ -32,8 +34,7 @@ def _ensure_hashes(tracks, db, progress):
             by_size[track.audio_size].append(track)
     todo = [t for group in by_size.values() if len(group) > 1 for t in group if not t.audio_hash]
     for n, track in enumerate(todo, 1):
-        if n % 500 == 0:
-            progress(f"  {n}/{len(todo)} Dateien gehasht ...")
+        job.step(n, len(todo), t("Dateien gehasht"))
         track.audio_hash = hash_audio(track.path, track.audio_start, track.audio_size)
         db.execute("UPDATE files SET audio_hash = ? WHERE path = ?", (track.audio_hash, track.path))
     db.commit()

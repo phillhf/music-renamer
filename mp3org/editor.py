@@ -4,22 +4,22 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from . import cli, journal
+from .i18n import FIELD_LABELS as LABELS
+from .i18n import t
 from .tags import FIELDS, write_tags
 
-LABELS = {"artist": "Interpret", "title": "Titel", "album": "Album", "albumartist": "Album-Interpret",
-          "year": "Jahr", "genre": "Genre", "track": "Track"}
 COLUMNS = ("artist", "title", "album", "year", "genre", "track")
 
 
 class TagEditor(tk.Toplevel):
     def __init__(self, parent, tracks):
         super().__init__(parent)
-        self.title("Tag-Editor")
+        self.title(t("Tag-Editor"))
         self.geometry("980x620")
         self.tracks = tracks
         self.filter_text = tk.StringVar()
         self.values = {field: tk.StringVar() for field in FIELDS}
-        self.status = tk.StringVar(value="Mehrere Dateien auswählen und nur die Felder füllen, die sich ändern sollen.")
+        self.status = tk.StringVar(value=t("Mehrere Dateien auswählen und nur die Felder füllen, die sich ändern sollen."))
         self._build()
         self._refresh()
 
@@ -31,7 +31,7 @@ class TagEditor(tk.Toplevel):
 
         search = ttk.Frame(main)
         search.grid(row=0, column=0, sticky="ew", pady=(0, 6))
-        ttk.Label(search, text="Suchen:").pack(side="left", padx=(0, 4))
+        ttk.Label(search, text=t("Suchen:")).pack(side="left", padx=(0, 4))
         ttk.Entry(search, textvariable=self.filter_text).pack(side="left", fill="x", expand=True)
         self.filter_text.trace_add("write", lambda *unused: self._refresh())
 
@@ -40,10 +40,10 @@ class TagEditor(tk.Toplevel):
         table.columnconfigure(0, weight=1)
         table.rowconfigure(0, weight=1)
         self.tree = ttk.Treeview(table, columns=("file", *COLUMNS), show="headings", selectmode="extended")
-        self.tree.heading("file", text="Datei")
+        self.tree.heading("file", text=t("Datei"))
         self.tree.column("file", width=260)
         for field in COLUMNS:
-            self.tree.heading(field, text=LABELS[field])
+            self.tree.heading(field, text=t(LABELS[field]))
             self.tree.column(field, width=60 if field in ("year", "track") else 130)
         scrollbar = ttk.Scrollbar(table, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
@@ -57,13 +57,13 @@ class TagEditor(tk.Toplevel):
             form.columnconfigure(column, weight=1)
         for number, field in enumerate(FIELDS):
             row, column = number // 2, (number % 2) * 2
-            ttk.Label(form, text=f"{LABELS[field]}:").grid(row=row, column=column, sticky="w", padx=(8, 4), pady=2)
+            ttk.Label(form, text=f"{t(LABELS[field])}:").grid(row=row, column=column, sticky="w", padx=(8, 4), pady=2)
             ttk.Entry(form, textvariable=self.values[field]).grid(row=row, column=column + 1, sticky="ew")
 
         bottom = ttk.Frame(main)
         bottom.grid(row=3, column=0, sticky="ew")
         ttk.Label(bottom, textvariable=self.status).pack(side="left")
-        ttk.Button(bottom, text="Speichern", command=self.save).pack(side="right")
+        ttk.Button(bottom, text=t("Speichern"), command=self.save).pack(side="right")
 
     def _refresh(self):
         needle = self.filter_text.get().casefold()
@@ -81,13 +81,13 @@ class TagEditor(tk.Toplevel):
         for field in FIELDS:
             shown = {getattr(track, field) for track in selection}
             self.values[field].set(shown.pop() if len(shown) == 1 else "")
-        self.status.set(f"{len(selection)} Dateien ausgewählt.")
+        self.status.set(t("Dateien ausgewählt: {count}", count=len(selection)))
 
     def save(self):
         selection = self._selection()
         entered = {f: v.get().strip() for f, v in self.values.items() if v.get().strip()}
         if not selection or not entered:
-            self.status.set("Bitte Dateien auswählen und mindestens ein Feld füllen.")
+            self.status.set(t("Bitte Dateien auswählen und mindestens ein Feld füllen."))
             return
         log = journal.Journal(cli.DATA_DIR, "editor")
         saved, failed = 0, []
@@ -108,6 +108,6 @@ class TagEditor(tk.Toplevel):
         selected = self.tree.selection()
         self._refresh()
         self.tree.selection_set([item for item in selected if self.tree.exists(item)])
-        self.status.set(f"{saved} Dateien gespeichert.")
+        self.status.set(t("Dateien gespeichert: {count}", count=saved))
         if failed:
-            messagebox.showerror("Tag-Editor", "\n".join(failed[:10]))
+            messagebox.showerror(t("Tag-Editor"), "\n".join(failed[:10]))

@@ -84,7 +84,7 @@ class Database(unittest.TestCase):
         db = library.connect(path)
         self.addCleanup(db.close)
         self.assertEqual(db.execute("SELECT count(*) FROM lookups").fetchone()[0], 1)
-        db.execute("SELECT fingerprint FROM files")
+        db.execute("SELECT has_cover FROM files")
 
 
 class Sound(Base):

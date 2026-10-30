@@ -18,19 +18,29 @@ Beim Start prüft das Programm, ob es auf GitHub eine neue Version gibt, und bie
 
 ## Benutzung
 
-Sammlung auswählen und die drei Schritte nacheinander abarbeiten. Jeder Schritt hat **Vorschau** (ändert nichts, schreibt einen CSV-Bericht) und **Ausführen**. Die Berichte öffnen sich über „Berichte öffnen“.
+Sammlung auswählen und die drei Schritte nacheinander abarbeiten. Jeder Schritt hat **Vorschau** (ändert nichts, schreibt einen CSV-Bericht) und **Prüfen und ausführen**. Die Berichte öffnen sich über „Berichte öffnen“.
+
+Die **Prüfansicht** zeigt jede geplante Änderung. Zeilen lassen sich abwählen und Felder per Doppelklick korrigieren; ausgeführt wird nur, was angehakt ist. Bei Dubletten lassen sich beide Dateien im Standard-Player anhören, und „Tauschen“ behält die andere Datei.
+
+Jeder Lauf zeigt Fortschritt und Restzeit und lässt sich mit „Abbrechen“ stoppen. Bereits Erledigtes bleibt erhalten, gesuchte Treffer auch, sodass der nächste Lauf dort weitermacht.
 
 1. **Dubletten verschieben.** Identische Audiodaten werden auch bei unterschiedlichen Tags und Namen erkannt. Behalten wird die Datei mit der höchsten Bitrate, danach die mit den meisten Tags. Der Rest wandert nach `<Sammlung>\Dubletten`, also zum Beispiel von `C:\Musik` nach `C:\Musik\Dubletten`, gelöscht wird nichts. Alle Schritte lassen diesen Ordner aus. Mit „Am Klang vergleichen“ findet das Programm dieselbe Aufnahme auch in anderer Bitrate oder anderem Format, unabhängig von den Tags; dafür analysiert es jede Datei einmal, etwa eine Sekunde je Datei. Einen Key braucht das nicht. Ähnliche Dubletten (gleicher Interpret und Titel, Länge bis 2 Sekunden Abstand) werden nur verschoben, wenn das Häkchen gesetzt ist. Live-Versionen und Remixe zählen nicht als gleich.
 2. **Metadaten ergänzen.** Interpret und Titel kommen aus den Tags oder dem Dateinamen, Album, Jahr, Genre und Tracknummer aus [MusicBrainz](https://musicbrainz.org) und bei Bedarf aus der iTunes-Suche. Standardmäßig werden nur leere Felder und Platzhalter wie „Track 01“ gefüllt. Dateien ohne sicheren Treffer bleiben unverändert und stehen in `nicht-gefunden.csv`.
 
-   Ein Ordner gilt als Album: Passen mindestens drei Titel und 60 % des Ordners zum selben Album, bekommen sie dieses Album samt Tracknummern und Album-Interpret, auch wenn einzelne Titel für sich eher zu einem Sampler passen würden.
+   Ein Ordner gilt als Album: Passen mindestens drei Titel und 60 % des Ordners oder mindestens fünf Titel zum selben Album, bekommen sie dieses Album samt Tracknummern und Album-Interpret, auch wenn einzelne Titel für sich eher zu einem Sampler passen würden. Enthält ein Ordner mehrere Alben, werden sie nacheinander erkannt. Bereits vollständige Titel im selben Ordner zählen dabei mit, behalten aber ihre Tags.
+
+   „Genres vereinheitlichen“ führt Varianten wie „Synth-Pop“ auf eine kurze Liste zurück, auch bei schon getaggten Dateien. Eigene Zuordnungen stehen in der Datei, die „Genre-Regeln“ öffnet, zum Beispiel `"krautrock": "Rock"`.
+
+   Findet MusicBrainz nichts, fragt das Programm die Klangerkennung und danach [Discogs](https://www.discogs.com/settings/developers), falls ein Token eingetragen ist.
 
    Auf Wunsch bettet das Programm fehlende Cover aus dem [Cover Art Archive](https://coverartarchive.org) und Songtexte von [LRCLIB](https://lrclib.net) ein. Vorhandene bleiben unberührt. Heruntergeladen wird erst bei „Ausführen“.
 3. **Dateien umbenennen und sortieren.** Das Muster bestimmt den Namen, Standard ist `{artist} - {title}`. Verfügbar sind `{artist}`, `{title}`, `{album}`, `{albumartist}`, `{year}`, `{genre}` und `{track}`. Ein `/` erzeugt Ordner, zum Beispiel sortiert `{artist}/{album}/{track} - {title}` die ganze Sammlung nach Interpret und Album; leere Ordner werden dabei entfernt. Dateien ohne Interpret oder Titel werden übersprungen.
 
 Der **Tag-Editor** zeigt alle Dateien mit Suche. Mehrere Dateien lassen sich auswählen und gemeinsam ändern: Nur ausgefüllte Felder werden gespeichert.
 
-„Letzten Schritt rückgängig“ nimmt den zuletzt ausgeführten Schritt zurück, auch Änderungen aus dem Tag-Editor; wiederholtes Klicken geht weiter zurück.
+Der **Verlauf** listet alle ausgeführten Schritte mit Datum, auch Änderungen aus dem Tag-Editor. Zurücknehmen geht bis zu einem gewählten Schritt; neuere Schritte werden dabei mit zurückgenommen, weil sie darauf aufbauen.
+
+Die Oberfläche gibt es auf Deutsch und Englisch, die Sprache gilt ab dem nächsten Start.
 
 ## Laufzeit
 

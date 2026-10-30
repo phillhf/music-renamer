@@ -193,6 +193,7 @@ class AcoustidRetry(Base):
     def find(self, key="", level="normal"):
         with mock.patch.dict(os.environ, {"ACOUSTID_KEY": key}), \
                 mock.patch.object(lookup, "find_fpcalc", return_value="fpcalc.exe"), \
+                mock.patch.object(lookup, "audio_key", return_value="a"), \
                 mock.patch.object(lookup, "_itunes", return_value=None):
             return lookup.Lookup(self.db, level).find("a.mp3", "Band", "Song", 100)
 

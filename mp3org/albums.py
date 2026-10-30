@@ -1,13 +1,15 @@
 """Betrachtet einen Ordner als Album, statt jeden Titel einzeln einzuordnen.
 
-Einzeln passt ein Song oft besser zu einem Sampler. Stimmen aber die meisten Titel
-eines Ordners in einem Album überein, bekommen sie alle dieses Album.
+Einzeln passt ein Song oft besser zu einem Sampler. Stimmen aber mehrere Titel eines
+Ordners in einem Album überein, bekommen sie dieses Album. Ein Ordner darf auch mehrere
+Alben enthalten; sie werden nacheinander herausgelöst.
 """
 import os
 from collections import Counter, defaultdict
 
 MIN_TRACKS = 3
 MIN_SHARE = 0.6
+CLEAR_MAJORITY = 5  # so viele Titel eines Albums reichen auch in einem gemischten Ordner
 VARIOUS = "Various Artists"
 
 
@@ -26,8 +28,21 @@ def _best_group(matches):
     # Bei Gleichstand gewinnt das Studioalbum
     group = min(votes, key=lambda g: (-votes[g], min(
         (r["rank"] for f in matches for r in f.get("releases", []) if r["group"] == g))))
-    enough = votes[group] >= MIN_TRACKS and votes[group] >= MIN_SHARE * len(matches)
+    enough = votes[group] >= MIN_TRACKS and (
+        votes[group] >= MIN_SHARE * len(matches) or votes[group] >= CLEAR_MAJORITY)
     return group if enough else None
+
+
+def _assign(members, group):
+    years = [entry["date"][:4] for _, entry in members if entry["date"]]
+    artists = {found.get("artist") for found, _ in members}
+    for found, entry in members:
+        found.update(album=entry["title"], group=group,
+                     albumartist=next(iter(artists)) if len(artists) == 1 else VARIOUS)
+        if entry["track"]:
+            found["track"] = entry["track"]
+        if years:
+            found["year"] = min(years)
 
 
 def align_albums(matches):
@@ -36,19 +51,11 @@ def align_albums(matches):
     for track, found in matches:
         folders[os.path.dirname(track.path)].append(found)
     aligned = 0
-    for found_list in folders.values():
-        group = _best_group(found_list)
-        if not group:
-            continue
-        members = [(found, _entry(found, group)) for found in found_list if _entry(found, group)]
-        years = [entry["date"][:4] for _, entry in members if entry["date"]]
-        artists = {found["artist"] for found, _ in members}
-        for found, entry in members:
-            found.update(album=entry["title"], group=group,
-                         albumartist=artists.copy().pop() if len(artists) == 1 else VARIOUS)
-            if entry["track"]:
-                found["track"] = entry["track"]
-            if years:
-                found["year"] = min(years)
-            aligned += 1
+    for remaining in folders.values():
+        while group := _best_group(remaining):
+            members = [(found, _entry(found, group)) for found in remaining if _entry(found, group)]
+            _assign(members, group)
+            aligned += len(members)
+            done = {id(found) for found, _ in members}
+            remaining = [found for found in remaining if id(found) not in done]
     return aligned

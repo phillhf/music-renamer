@@ -9,6 +9,10 @@ import subprocess
 from collections import Counter, defaultdict
 from itertools import combinations
 
+from .i18n import t
+from .job import job
+from .library import audio_key
+
 MIN_SIMILARITY = 0.85
 MAX_DURATION_GAP = 5.0
 MAX_OFFSET = 32        # etwa 4 Sekunden Versatz, z. B. durch Stille am Anfang
@@ -42,20 +46,21 @@ def similarity(a, b):
     return best
 
 
-def _load(tracks, db, fpcalc, progress):
+def _load(tracks, db, fpcalc):
     prints = {}
     for number, track in enumerate(tracks, 1):
-        if number % 100 == 0:
-            progress(f"  {number}/{len(tracks)} Dateien am Klang analysiert ...")
-        if not track.fingerprint:
-            track.fingerprint = json.dumps(raw_fingerprint(track.path, fpcalc))
-            db.execute("UPDATE files SET fingerprint = ? WHERE path = ?", (track.fingerprint, track.path))
-            if number % 100 == 0:
-                db.commit()
-        values = json.loads(track.fingerprint)
+        job.step(number, len(tracks), t("Klangvergleich"))
+        # Am Audioinhalt gemerkt, damit Umbenennen keine neue Analyse auslöst
+        key = f"fingerprint:{audio_key(track.path)}"
+        row = db.execute("SELECT result FROM lookups WHERE key = ?", (key,)).fetchone()
+        if row:
+            values = json.loads(row[0])
+        else:
+            values = raw_fingerprint(track.path, fpcalc)
+            db.execute("INSERT OR REPLACE INTO lookups VALUES (?, ?)", (key, json.dumps(values)))
+            db.commit()
         if values:
             prints[track.path] = values
-    db.commit()
     return prints
 
 
@@ -74,7 +79,7 @@ def _candidates(prints):
 def find_groups(tracks, db, fpcalc, progress=print):
     """Liefert Listen von Tracks, die am Klang gleich sind."""
     by_path = {track.path: track for track in tracks}
-    prints = _load(tracks, db, fpcalc, progress)
+    prints = _load(tracks, db, fpcalc)
     parent = {path: path for path in prints}
 
     def root(path):

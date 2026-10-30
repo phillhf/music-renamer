@@ -17,6 +17,7 @@ import urllib.request
 from difflib import SequenceMatcher
 
 from . import __version__
+from .library import audio_key
 from .names import normalize
 
 USER_AGENT = f"MP3Organizer/{__version__} (https://github.com/phillhf/mp3-organizer)"
@@ -51,14 +52,14 @@ SSL_CONTEXT.verify_flags &= ~ssl.VERIFY_X509_STRICT
 _last_call = {}
 
 
-def _fetch(url, min_interval, data=None):
+def _fetch(url, min_interval, data=None, headers=None):
     host = urllib.parse.urlparse(url).netloc
     for attempt in range(4):
         wait = _last_call.get(host, 0) + min_interval - time.monotonic()
         if wait > 0:
             time.sleep(wait)
         _last_call[host] = time.monotonic()
-        request = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT})
+        request = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT, **(headers or {})})
         try:
             with urllib.request.urlopen(request, timeout=30, context=SSL_CONTEXT) as response:
                 return response.read()
@@ -218,6 +219,25 @@ def _itunes(artist, title):
     return None
 
 
+def _discogs(artist, title, token):
+    """Zweite Quelle für das, was MusicBrainz nicht kennt."""
+    params = urllib.parse.urlencode({"artist": artist, "track": title, "type": "release", "per_page": 10})
+    try:
+        content = _fetch(f"https://api.discogs.com/database/search?{params}", 1.1,
+                         headers={"Authorization": f"Discogs token={token}"})
+    except urllib.error.HTTPError:
+        return None  # z. B. ein ungültiges Token
+    for item in json.loads(content or "{}").get("results", []):
+        found_artist, separator, album = item.get("title", "").partition(" - ")
+        # Discogs hängt bei gleichnamigen Künstlern eine Nummer an: "Nirvana (2)"
+        found_artist = re.sub(r"\s*\(\d+\)$", "", found_artist)
+        if separator and _similar(found_artist, artist) >= MIN_SIMILARITY:
+            return {"artist": found_artist, "title": title, "album": album, "year": str(item.get("year") or ""),
+                    "genre": (item.get("genre") or [""])[0], "track": "", "source": "discogs",
+                    "group": "", "releases": [], "score": ""}
+    return None
+
+
 def find_fpcalc():
     # sys._MEIPASS ist der Programmordner der installierten Version
     folders = (getattr(sys, "_MEIPASS", ""), os.path.join(PROJECT_DIR, "tools"))
@@ -268,14 +288,29 @@ class Lookup:
         self.cache = Cache(db)
         self.api_key = os.environ.get("ACOUSTID_KEY", "")
         self.fpcalc = find_fpcalc() if self.api_key else None
+        self.discogs_token = os.environ.get("DISCOGS_TOKEN", "")
         self.min_score = parse_accuracy(level)
 
     def find(self, path, artist, title, duration):
         """Liefert die Metadaten, ein Dict mit "rejected" oder None, wenn nichts passt."""
         result = self._by_name(artist, title, duration)
-        if result or not self.fpcalc:
-            return result or None
-        return self._by_sound(path)
+        if result:
+            return result
+        # Der Klang ist sicherer als ein zweiter Namensabgleich, darum zuerst AcoustID
+        result = self._by_sound(path) if self.fpcalc else None
+        if (not result or result.get("rejected")) and self.discogs_token:
+            return self._by_discogs(artist, title) or result
+        return result
+
+    def _by_discogs(self, artist, title):
+        if not (artist and title):
+            return None
+        key = f"discogs:{normalize(artist)}|{normalize(title)}"
+        cached = self.cache.get(key)
+        if cached is None:
+            cached = _discogs(artist, title, self.discogs_token) or {}
+            self.cache.set(key, cached)
+        return cached or None
 
     def _by_name(self, artist, title, duration):
         if not (artist and title):
@@ -290,7 +325,8 @@ class Lookup:
         return result
 
     def _by_sound(self, path):
-        key = f"acoustid:{path}"
+        # Am Audioinhalt gemerkt, damit Umbenennen keine neue Analyse auslöst
+        key = f"acoustid:{audio_key(path)}"
         entry = self.cache.get(key)
         if not entry:
             score, recording = _acoustid(path, self.api_key, self.fpcalc)
