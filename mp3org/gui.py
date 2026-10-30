@@ -6,12 +6,14 @@ import queue
 import sys
 import threading
 import tkinter as tk
+import webbrowser
 from argparse import Namespace
 from tkinter import filedialog, messagebox, ttk
 
 from . import __version__, cli, journal, updater
 
 SETTINGS_PATH = os.path.join(cli.APP_DIR, "einstellungen.json")
+ACOUSTID_KEY_URL = "https://acoustid.org/new-application"
 
 
 class QueueWriter:
@@ -90,6 +92,10 @@ class App(tk.Tk):
                      lambda: self._run_background(self._check_update, quiet=False)).pack(side="left")
         ttk.Label(bottom, text="AcoustID-Key:").pack(side="left", padx=(12, 4))
         ttk.Entry(bottom, textvariable=self.acoustid_key, width=14, show="*").pack(side="left")
+        link = tk.Label(bottom, text="Key holen", fg="#0a58ca", cursor="hand2",
+                        font=("Segoe UI", 9, "underline"))
+        link.pack(side="left", padx=(6, 0))
+        link.bind("<Button-1>", lambda event: webbrowser.open(ACOUSTID_KEY_URL))
 
     def _step(self, parent, row, label, action):
         ttk.Label(parent, text=label).grid(row=row, column=0, columnspan=2, sticky="w", pady=(6, 2))

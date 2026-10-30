@@ -30,7 +30,7 @@ MusicBrainz erlaubt eine Anfrage pro Sekunde, 10.000 Titel dauern also mehrere S
 
 ## Dateien ohne brauchbaren Namen
 
-Dateien wie `track01.mp3` ohne Tags lassen sich nur am Klang erkennen. Dafür einen kostenlosen Key auf [acoustid.org](https://acoustid.org/new-application) anlegen und im Feld „AcoustID-Key“ eintragen. Das nötige `fpcalc` ist im Installer enthalten.
+Dateien wie `track01.mp3` ohne Tags lassen sich nur am Klang erkennen. Dafür einen kostenlosen Key auf [acoustid.org](https://acoustid.org/new-application) anlegen (der Link „Key holen“ im Programm führt direkt dorthin) und im Feld „AcoustID-Key“ eintragen. Das nötige `fpcalc` ist im Installer enthalten.
 
 ## Daten
 
