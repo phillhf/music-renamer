@@ -209,6 +209,26 @@ class AcoustidRetry(Base):
             self.assertTrue(self.find("key")["rejected"])
             self.assertEqual(self.find("key", "locker")["year"], "1999")
 
+    def test_custom_percentage_overrides_levels(self):
+        with mock.patch.object(lookup, "_search_mb", return_value=None), \
+                mock.patch.object(lookup, "_acoustid", return_value=(0.9, self.RECORDING)):
+            self.assertTrue(self.find("key", "92")["rejected"])
+            self.assertEqual(self.find("key", "88,5")["score"], 90)
+
+    def test_accuracy_values(self):
+        self.assertEqual(lookup.parse_accuracy("normal"), 0.85)
+        self.assertEqual(lookup.parse_accuracy("92"), 0.92)
+        self.assertEqual(lookup.parse_accuracy("92,5 %"), 0.925)
+        for wrong in ("0", "0,5", "101", "-5", "abc", "", "nan"):
+            with self.assertRaises(ValueError, msg=wrong):
+                lookup.parse_accuracy(wrong)
+
+    def test_invalid_accuracy_stops_the_run(self):
+        make_mp3(self.path("a.mp3"), 1)
+        args = Namespace(ordner=self.root, apply=False, ueberschreiben=False, limit=None, genauigkeit="abc")
+        with self.assertRaises(SystemExit):
+            cli.cmd_tag(args)
+
     def test_acoustid_prefers_studio_album_over_first_recording(self):
         def recording(date, title, *secondary):
             group = {"primary-type": "Album", "secondary-types": list(secondary)}

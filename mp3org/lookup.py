@@ -25,6 +25,19 @@ MAX_DURATION_DIFF = 8.0
 MAX_RECORDINGS = 5
 # Mindestwert der Klangerkennung je Stufe
 LEVELS = {"streng": 0.95, "normal": 0.85, "locker": 0.70}
+
+
+def parse_accuracy(value):
+    """Stufenname oder Prozentzahl wie "92" oder "92,5 %" als Wert von 0 bis 1."""
+    if value in LEVELS:
+        return LEVELS[value]
+    try:
+        percent = float(str(value).replace("%", "").replace(",", ".").strip())
+    except ValueError:
+        percent = 0
+    if not 1 <= percent <= 100:
+        raise ValueError(f"Ungültige Genauigkeit: {value} (erlaubt: {', '.join(LEVELS)} oder 1 bis 100)")
+    return percent / 100
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _last_call = {}
@@ -210,7 +223,7 @@ class Lookup:
         self.cache = Cache(db)
         self.api_key = os.environ.get("ACOUSTID_KEY", "")
         self.fpcalc = find_fpcalc() if self.api_key else None
-        self.min_score = LEVELS[level]
+        self.min_score = parse_accuracy(level)
 
     def find(self, path, artist, title, duration):
         """Liefert die Metadaten, ein Dict mit "rejected" oder None, wenn nichts passt."""

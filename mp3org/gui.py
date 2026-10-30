@@ -11,10 +11,17 @@ from argparse import Namespace
 from tkinter import filedialog, messagebox, ttk
 
 from . import __version__, cli, journal, updater
-from .lookup import LEVELS
+from .lookup import LEVELS, parse_accuracy
 
 SETTINGS_PATH = os.path.join(cli.APP_DIR, "einstellungen.json")
 ACOUSTID_KEY_URL = "https://acoustid.org/new-application"
+
+
+def level_label(level):
+    return f"{level.title()} ({LEVELS[level] * 100:.0f} %)"
+
+
+LEVEL_LABELS = {level_label(level): level for level in LEVELS}
 
 
 class QueueWriter:
@@ -57,7 +64,9 @@ class App(tk.Tk):
         settings = load_settings()
         self.folder = tk.StringVar(value=settings.get("ordner", ""))
         self.acoustid_key = tk.StringVar(value=settings.get("acoustid_key", ""))
-        self.accuracy = tk.StringVar(value=settings.get("genauigkeit", "Normal"))
+        saved_level = settings.get("genauigkeit", "normal").lower()
+        self.accuracy = tk.StringVar(value=level_label(saved_level if saved_level in LEVELS else "normal"))
+        self.custom_accuracy = tk.StringVar(value=settings.get("eigene_genauigkeit", ""))
         self.similar = tk.BooleanVar(value=False)
         self.overwrite = tk.BooleanVar(value=False)
         self._build()
@@ -82,10 +91,18 @@ class App(tk.Tk):
         options = ttk.Frame(main)
         options.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 6))
         ttk.Checkbutton(options, text="Vorhandene Tags ersetzen statt nur leere Felder füllen",
-                        variable=self.overwrite).pack(side="left")
-        ttk.Combobox(options, textvariable=self.accuracy, values=[l.title() for l in LEVELS],
-                     state="readonly", width=8).pack(side="right")
-        ttk.Label(options, text="Genauigkeit Klangerkennung:").pack(side="right", padx=(12, 4))
+                        variable=self.overwrite).pack(anchor="w")
+        accuracy = ttk.Frame(options)
+        accuracy.pack(anchor="w", pady=(4, 0))
+        ttk.Label(accuracy, text="Genauigkeit Klangerkennung:").pack(side="left", padx=(0, 4))
+        self.level_box = ttk.Combobox(accuracy, textvariable=self.accuracy, values=list(LEVEL_LABELS),
+                                      state="readonly", width=14)
+        self.level_box.pack(side="left")
+        ttk.Label(accuracy, text="oder eigener Wert:").pack(side="left", padx=(12, 4))
+        ttk.Entry(accuracy, textvariable=self.custom_accuracy, width=6).pack(side="left")
+        ttk.Label(accuracy, text="%").pack(side="left", padx=(2, 0))
+        self.custom_accuracy.trace_add("write", self._update_level_box)
+        self._update_level_box()
         self._step(main, 5, "3. Dateien umbenennen", self._rename)
 
         self.log = tk.Text(main, height=12, state="disabled", wrap="word")
@@ -171,7 +188,8 @@ class App(tk.Tk):
         if apply and not messagebox.askyesno("MP3 Organizer", question):
             return
         settings = {"ordner": folder, "acoustid_key": self.acoustid_key.get().strip(),
-                    "genauigkeit": self.accuracy.get()}
+                    "genauigkeit": LEVEL_LABELS[self.accuracy.get()],
+                    "eigene_genauigkeit": self.custom_accuracy.get().strip()}
         save_settings(settings)
         os.environ["ACOUSTID_KEY"] = settings["acoustid_key"]
         self._run_background(command, Namespace(ordner=folder, apply=apply, **options))
@@ -181,9 +199,18 @@ class App(tk.Tk):
                     ziel=None, aehnlich=self.similar.get())
 
     def _tags(self, apply):
+        accuracy = self.custom_accuracy.get().strip() or LEVEL_LABELS[self.accuracy.get()]
+        try:
+            parse_accuracy(accuracy)
+        except ValueError:
+            messagebox.showerror("MP3 Organizer", "Bitte als eigenen Wert eine Zahl von 1 bis 100 eintragen.")
+            return
         self._start(cli.cmd_tag, apply, "Tags jetzt in die Dateien schreiben?",
-                    ueberschreiben=self.overwrite.get(), limit=None,
-                    genauigkeit=self.accuracy.get().lower())
+                    ueberschreiben=self.overwrite.get(), limit=None, genauigkeit=accuracy)
+
+    def _update_level_box(self, *unused):
+        # Ein eigener Wert hat Vorrang, die Stufe gilt dann nicht
+        self.level_box.configure(state="disabled" if self.custom_accuracy.get().strip() else "readonly")
 
     def _rename(self, apply):
         self._start(cli.cmd_rename, apply, "Dateien jetzt umbenennen?", muster="{artist} - {title}")

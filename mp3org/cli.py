@@ -8,7 +8,7 @@ from . import __version__, updater
 from . import journal as journaling
 from . import library
 from .dupes import find_duplicates
-from .lookup import LEVELS, Lookup
+from .lookup import Lookup
 from .names import clean, identify, safe_filename
 from .tags import write_tags
 
@@ -101,8 +101,13 @@ def cmd_tag(args):
     root, db, tracks = prepare(args)
     if args.limit:
         tracks = tracks[:args.limit]
-    lookup = Lookup(db, args.genauigkeit)
-    if not (lookup.api_key and lookup.fpcalc):
+    try:
+        lookup = Lookup(db, args.genauigkeit)
+    except ValueError as exc:
+        sys.exit(str(exc))
+    if lookup.api_key and lookup.fpcalc:
+        print(f"Klangerkennung aktiv, Mindestwert {lookup.min_score * 100:g} %.")
+    else:
         print("Hinweis: ohne ACOUSTID_KEY und fpcalc läuft die Suche nur über Name und Tags.")
     plan, unresolved, rows = [], [], []
     for number, track in enumerate(tracks, 1):
@@ -230,8 +235,8 @@ def main():
     tag = command("tags", cmd_tag, "Metadaten suchen und ergänzen")
     tag.add_argument("--ueberschreiben", action="store_true", help="auch vorhandene Tags ersetzen")
     tag.add_argument("--limit", type=int, help="nur die ersten N Dateien (zum Ausprobieren)")
-    tag.add_argument("--genauigkeit", choices=LEVELS, default="normal",
-                     help="Mindestwert der Klangerkennung (AcoustID)")
+    tag.add_argument("--genauigkeit", default="normal",
+                     help="Mindestwert der Klangerkennung: streng, normal, locker oder Prozentzahl")
     rename = command("umbenennen", cmd_rename, "Dateien nach Tags benennen")
     rename.add_argument("--muster", default="{artist} - {title}",
                         help='Standard "{artist} - {title}"; / erzeugt Unterordner')
