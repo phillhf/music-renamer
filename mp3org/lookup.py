@@ -22,6 +22,9 @@ USER_AGENT = f"MP3Organizer/{__version__} (https://github.com/phillhf/mp3-organi
 MB_URL = "https://musicbrainz.org/ws/2"
 MIN_SIMILARITY = 0.85
 MAX_DURATION_DIFF = 8.0
+MAX_RECORDINGS = 5
+# Mindestwert der Klangerkennung je Stufe
+LEVELS = {"streng": 0.95, "normal": 0.85, "locker": 0.70}
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _last_call = {}
@@ -51,6 +54,16 @@ def _get(url, min_interval, data=None):
 
 def _similar(a, b):
     return SequenceMatcher(None, normalize(a), normalize(b)).ratio()
+
+
+def _pick(candidates):
+    """Wählt aus (Ähnlichkeit, Aufnahme)-Paaren die beste Aufnahme."""
+    score, best = min(candidates, key=lambda c: _preference(*c))
+    # Remaster sind eigene Aufnahmen; das Jahr soll die Erstveröffentlichung des Songs sein
+    dates = [r["first-release-date"] for _, r in candidates if r.get("first-release-date")]
+    if dates:
+        best = {**best, "first-release-date": min(dates)}
+    return score, best
 
 
 def _credit(recording):
@@ -120,12 +133,7 @@ def _search_mb(artist, title, duration):
         if not wants_live and "live" in (recording.get("disambiguation") or "").lower():
             continue
         candidates.append((round(similarity, 2), recording))
-    if not candidates:
-        return None
-    best = min(candidates, key=lambda c: _preference(c[0], c[1]))[1]
-    # Remaster sind eigene Aufnahmen; das Jahr soll die Erstveröffentlichung des Songs sein
-    dates = [r["first-release-date"] for _, r in candidates if r.get("first-release-date")]
-    return {**best, "first-release-date": min(dates)} if dates else best
+    return _pick(candidates) if candidates else None
 
 
 def _artist_genre(artist_id, cache):
@@ -166,18 +174,22 @@ def _acoustid(path, api_key, fpcalc):
     output = subprocess.run([fpcalc, "-json", path], capture_output=True, text=True, timeout=120,
                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     if output.returncode != 0:
-        return None
+        return 0, None
     fingerprint = json.loads(output.stdout)
     body = urllib.parse.urlencode({
         "client": api_key, "duration": int(fingerprint["duration"]),
         "fingerprint": fingerprint["fingerprint"], "meta": "recordingids"}).encode()
     data = _get("https://api.acoustid.org/v2/lookup", 0.4, data=body) or {}
+    # Die Schwelle wird erst beim Lesen angewendet, damit ein Stufenwechsel ohne neue Analyse geht
     for result in sorted(data.get("results", []), key=lambda r: -r.get("score", 0)):
-        if result.get("score", 0) >= 0.85 and result.get("recordings"):
-            recording_id = result["recordings"][0]["id"]
-            return _get(f"{MB_URL}/recording/{recording_id}?inc=artist-credits+releases+"
-                        "release-groups+genres+tags&fmt=json", 1.1)
-    return None
+        if result.get("recordings"):
+            recordings = [_get(f"{MB_URL}/recording/{r['id']}?inc=artist-credits+releases+"
+                               "release-groups+genres+tags&fmt=json", 1.1)
+                          for r in result["recordings"][:MAX_RECORDINGS]]
+            recordings = [r for r in recordings if r]
+            if recordings:
+                return result["score"], _pick([(1.0, r) for r in recordings])[1]
+    return 0, None
 
 
 class Cache:
@@ -194,44 +206,50 @@ class Cache:
 
 
 class Lookup:
-    def __init__(self, db):
+    def __init__(self, db, level="normal"):
         self.cache = Cache(db)
         self.api_key = os.environ.get("ACOUSTID_KEY", "")
         self.fpcalc = find_fpcalc() if self.api_key else None
+        self.min_score = LEVELS[level]
 
     def find(self, path, artist, title, duration):
-        """Liefert ein Ergebnis-Dict oder None, wenn nichts sicher passt."""
-        key = f"song:{normalize(artist)}|{normalize(title)}|{round((duration or 0) / 10)}"
-        if not (artist and title):
-            key = None
-        cached = self.cache.get(key) if key else None
-        if cached:
-            return cached
-        # Eine gemerkte Fehlsuche ({}) wiederholt nur noch die Klangerkennung, falls verfügbar
-        result = self._query(path, artist, title, duration, search_names=cached is None)
-        if key and result != cached:
-            self.cache.set(key, result)
-        return result or None
+        """Liefert die Metadaten, ein Dict mit "rejected" oder None, wenn nichts passt."""
+        result = self._by_name(artist, title, duration)
+        if result or not self.fpcalc:
+            return result or None
+        return self._by_sound(path)
 
-    def _query(self, path, artist, title, duration, search_names=True):
-        recording = None
-        if search_names and artist and title:
-            recording = _search_mb(artist, title, duration) or _search_mb(title, artist, duration)
-        if not recording and self.fpcalc:
-            cached_key = f"acoustid:{path}"
-            recording = self.cache.get(cached_key)
-            if recording is None:
-                recording = _acoustid(path, self.api_key, self.fpcalc) or {}
-                self.cache.set(cached_key, recording)
-            source = "acoustid"
-        else:
-            source = "musicbrainz"
-        if not recording:
+    def _by_name(self, artist, title, duration):
+        if not (artist and title):
             return {}
+        key = f"song:{normalize(artist)}|{normalize(title)}|{round((duration or 0) / 10)}"
+        cached = self.cache.get(key)
+        if cached is not None:
+            return cached
+        found = _search_mb(artist, title, duration) or _search_mb(title, artist, duration)
+        result = self._details(found[1], "musicbrainz", found[0]) if found else {}
+        self.cache.set(key, result)
+        return result
+
+    def _by_sound(self, path):
+        key = f"acoustid:{path}"
+        entry = self.cache.get(key)
+        if not entry:
+            score, recording = _acoustid(path, self.api_key, self.fpcalc)
+            entry = {"score": score, "result": self._details(recording, "acoustid", score) if recording else {}}
+            self.cache.set(key, entry)
+        if not entry["result"]:
+            return None
+        if entry["score"] < self.min_score:
+            return {"score": round(entry["score"] * 100), "rejected": True}
+        return entry["result"]
+
+    def _details(self, recording, source, score):
         result = _result_from(recording, source)
+        result["score"] = round(score * 100)
+        artist_id = result.pop("artist_id")
         if not result["genre"]:
-            result["genre"] = _artist_genre(result.pop("artist_id"), self.cache)
-        result.pop("artist_id", None)
+            result["genre"] = _artist_genre(artist_id, self.cache)
         if not result["genre"] or not result["year"]:
             item = _itunes(result["artist"], result["title"])
             if item:

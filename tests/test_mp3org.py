@@ -190,15 +190,59 @@ class AcoustidRetry(Base):
     RECORDING = {"title": "Song", "first-release-date": "1999",
                  "artist-credit": [{"name": "Band", "artist": {"id": ""}}]}
 
-    def find(self, key=""):
+    def find(self, key="", level="normal"):
         with mock.patch.dict(os.environ, {"ACOUSTID_KEY": key}), \
                 mock.patch.object(lookup, "find_fpcalc", return_value="fpcalc.exe"), \
                 mock.patch.object(lookup, "_itunes", return_value=None):
-            return lookup.Lookup(self.db).find("a.mp3", "Band", "Song", 100)
+            return lookup.Lookup(self.db, level).find("a.mp3", "Band", "Song", 100)
+
+    def test_level_can_change_without_new_analysis(self):
+        with mock.patch.object(lookup, "_search_mb", return_value=None), \
+                mock.patch.object(lookup, "_acoustid", return_value=(0.9, self.RECORDING)) as acoustid:
+            self.assertEqual(self.find("key", "streng"), {"score": 90, "rejected": True})
+            self.assertEqual(self.find("key", "normal")["score"], 90)
+            self.assertEqual(acoustid.call_count, 1)
+
+    def test_low_score_is_rejected_on_normal_but_accepted_on_loose(self):
+        with mock.patch.object(lookup, "_search_mb", return_value=None), \
+                mock.patch.object(lookup, "_acoustid", return_value=(0.75, self.RECORDING)):
+            self.assertTrue(self.find("key")["rejected"])
+            self.assertEqual(self.find("key", "locker")["year"], "1999")
+
+    def test_acoustid_prefers_studio_album_over_first_recording(self):
+        def recording(date, title, *secondary):
+            group = {"primary-type": "Album", "secondary-types": list(secondary)}
+            return {"title": "Song", "first-release-date": date, "releases": [
+                {"status": "Official", "date": date, "title": title, "release-group": group}]}
+        answers = [{"results": [{"score": 0.5, "recordings": [{"id": "x"}]},
+                                {"score": 0.97, "recordings": [{"id": "a"}, {"id": "b"}]}]},
+                   recording("2010", "Sampler", "Compilation"), recording("1984", "Studio")]
+        fpcalc = mock.Mock(returncode=0, stdout='{"duration": 100, "fingerprint": "f"}')
+        with mock.patch.object(lookup.subprocess, "run", return_value=fpcalc), \
+                mock.patch.object(lookup, "_get", side_effect=answers):
+            score, best = lookup._acoustid("a.mp3", "key", "fpcalc.exe")
+        self.assertEqual(score, 0.97)
+        self.assertEqual(best["releases"][0]["title"], "Studio")
+
+    def test_report_shows_score_and_rejected_files(self):
+        make_mp3(self.path("gut.mp3"), 1)
+        make_mp3(self.path("unsicher.mp3"), 2)
+
+        def find(fake, path, artist, title, duration):
+            if path.endswith("gut.mp3"):
+                return {"title": "T", "source": "acoustid", "score": 93}
+            return {"score": 72, "rejected": True}
+        args = Namespace(ordner=self.root, apply=False, ueberschreiben=False, limit=None, genauigkeit="normal")
+        with mock.patch.object(lookup.Lookup, "find", find):
+            cli.cmd_tag(args)
+        with open(os.path.join(cli.REPORT_DIR, "tags-vorschau.csv"), encoding="utf-8-sig") as f:
+            self.assertIn(";93;", f.read())
+        with open(os.path.join(cli.REPORT_DIR, "nicht-gefunden.csv"), encoding="utf-8-sig") as f:
+            self.assertIn(";72", f.read())
 
     def test_key_added_later_retries_only_sound_recognition(self):
         with mock.patch.object(lookup, "_search_mb", return_value=None) as search, \
-                mock.patch.object(lookup, "_acoustid", return_value=self.RECORDING) as acoustid:
+                mock.patch.object(lookup, "_acoustid", return_value=(0.9, self.RECORDING)) as acoustid:
             self.assertIsNone(self.find())
             searches = search.call_count
             self.assertEqual(acoustid.call_count, 0)

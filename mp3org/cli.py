@@ -8,7 +8,7 @@ from . import __version__, updater
 from . import journal as journaling
 from . import library
 from .dupes import find_duplicates
-from .lookup import Lookup
+from .lookup import LEVELS, Lookup
 from .names import clean, identify, safe_filename
 from .tags import write_tags
 
@@ -101,7 +101,7 @@ def cmd_tag(args):
     root, db, tracks = prepare(args)
     if args.limit:
         tracks = tracks[:args.limit]
-    lookup = Lookup(db)
+    lookup = Lookup(db, args.genauigkeit)
     if not (lookup.api_key and lookup.fpcalc):
         print("Hinweis: ohne ACOUSTID_KEY und fpcalc läuft die Suche nur über Name und Tags.")
     plan, unresolved, rows = [], [], []
@@ -116,15 +116,16 @@ def cmd_tag(args):
             found = lookup.find(track.path, artist, title, track.duration)
         except ConnectionError as exc:
             sys.exit(f"Abbruch: {exc}. Bisherige Treffer sind gespeichert, einfach erneut starten.")
-        if not found:
-            unresolved.append((track.path, artist, title))
+        if not found or found.get("rejected"):
+            unresolved.append((track.path, artist, title, (found or {}).get("score", "")))
             continue
         changes = planned_changes(track, found, args.ueberschreiben)
         if changes:
             plan.append((track, changes))
-            rows.append((track.path, found["source"], *[changes.get(f, "") for f in TAG_FIELDS]))
-    report = write_report("tags-vorschau.csv", ("Datei", "Quelle", *TAG_FIELDS), rows)
-    review = write_report("nicht-gefunden.csv", ("Datei", "Interpret", "Titel"), unresolved)
+            rows.append((track.path, found["source"], found.get("score", ""),
+                         *[changes.get(f, "") for f in TAG_FIELDS]))
+    report = write_report("tags-vorschau.csv", ("Datei", "Quelle", "Trefferwert %", *TAG_FIELDS), rows)
+    review = write_report("nicht-gefunden.csv", ("Datei", "Interpret", "Titel", "Trefferwert %"), unresolved)
     print(f"{len(plan)} Dateien bekommen neue Tags, {len(unresolved)} ohne sicheren Treffer.")
     print(f"Berichte: {report} und {review}")
     if not args.apply:
@@ -229,6 +230,8 @@ def main():
     tag = command("tags", cmd_tag, "Metadaten suchen und ergänzen")
     tag.add_argument("--ueberschreiben", action="store_true", help="auch vorhandene Tags ersetzen")
     tag.add_argument("--limit", type=int, help="nur die ersten N Dateien (zum Ausprobieren)")
+    tag.add_argument("--genauigkeit", choices=LEVELS, default="normal",
+                     help="Mindestwert der Klangerkennung (AcoustID)")
     rename = command("umbenennen", cmd_rename, "Dateien nach Tags benennen")
     rename.add_argument("--muster", default="{artist} - {title}",
                         help='Standard "{artist} - {title}"; / erzeugt Unterordner')

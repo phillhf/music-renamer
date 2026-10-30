@@ -11,6 +11,7 @@ from argparse import Namespace
 from tkinter import filedialog, messagebox, ttk
 
 from . import __version__, cli, journal, updater
+from .lookup import LEVELS
 
 SETTINGS_PATH = os.path.join(cli.APP_DIR, "einstellungen.json")
 ACOUSTID_KEY_URL = "https://acoustid.org/new-application"
@@ -56,6 +57,7 @@ class App(tk.Tk):
         settings = load_settings()
         self.folder = tk.StringVar(value=settings.get("ordner", ""))
         self.acoustid_key = tk.StringVar(value=settings.get("acoustid_key", ""))
+        self.accuracy = tk.StringVar(value=settings.get("genauigkeit", "Normal"))
         self.similar = tk.BooleanVar(value=False)
         self.overwrite = tk.BooleanVar(value=False)
         self._build()
@@ -77,8 +79,13 @@ class App(tk.Tk):
         ttk.Checkbutton(main, text="Auch ähnliche Dubletten (gleicher Titel, andere Datei)",
                         variable=self.similar).grid(row=2, column=0, columnspan=3, sticky="w", pady=(0, 6))
         self._step(main, 3, "2. Metadaten ergänzen", self._tags)
-        ttk.Checkbutton(main, text="Vorhandene Tags ersetzen statt nur leere Felder füllen",
-                        variable=self.overwrite).grid(row=4, column=0, columnspan=3, sticky="w", pady=(0, 6))
+        options = ttk.Frame(main)
+        options.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 6))
+        ttk.Checkbutton(options, text="Vorhandene Tags ersetzen statt nur leere Felder füllen",
+                        variable=self.overwrite).pack(side="left")
+        ttk.Combobox(options, textvariable=self.accuracy, values=[l.title() for l in LEVELS],
+                     state="readonly", width=8).pack(side="right")
+        ttk.Label(options, text="Genauigkeit Klangerkennung:").pack(side="right", padx=(12, 4))
         self._step(main, 5, "3. Dateien umbenennen", self._rename)
 
         self.log = tk.Text(main, height=12, state="disabled", wrap="word")
@@ -163,7 +170,8 @@ class App(tk.Tk):
             return
         if apply and not messagebox.askyesno("MP3 Organizer", question):
             return
-        settings = {"ordner": folder, "acoustid_key": self.acoustid_key.get().strip()}
+        settings = {"ordner": folder, "acoustid_key": self.acoustid_key.get().strip(),
+                    "genauigkeit": self.accuracy.get()}
         save_settings(settings)
         os.environ["ACOUSTID_KEY"] = settings["acoustid_key"]
         self._run_background(command, Namespace(ordner=folder, apply=apply, **options))
@@ -174,7 +182,8 @@ class App(tk.Tk):
 
     def _tags(self, apply):
         self._start(cli.cmd_tag, apply, "Tags jetzt in die Dateien schreiben?",
-                    ueberschreiben=self.overwrite.get(), limit=None)
+                    ueberschreiben=self.overwrite.get(), limit=None,
+                    genauigkeit=self.accuracy.get().lower())
 
     def _rename(self, apply):
         self._start(cli.cmd_rename, apply, "Dateien jetzt umbenennen?", muster="{artist} - {title}")
