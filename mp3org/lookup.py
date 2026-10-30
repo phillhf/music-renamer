@@ -204,16 +204,18 @@ class Lookup:
         key = f"song:{normalize(artist)}|{normalize(title)}|{round((duration or 0) / 10)}"
         if not (artist and title):
             key = None
-        result = self.cache.get(key) if key else None
-        if result is None:
-            result = self._query(path, artist, title, duration)
-            if key:
-                self.cache.set(key, result)
+        cached = self.cache.get(key) if key else None
+        if cached:
+            return cached
+        # Eine gemerkte Fehlsuche ({}) wiederholt nur noch die Klangerkennung, falls verfügbar
+        result = self._query(path, artist, title, duration, search_names=cached is None)
+        if key and result != cached:
+            self.cache.set(key, result)
         return result or None
 
-    def _query(self, path, artist, title, duration):
+    def _query(self, path, artist, title, duration, search_names=True):
         recording = None
-        if artist and title:
+        if search_names and artist and title:
             recording = _search_mb(artist, title, duration) or _search_mb(title, artist, duration)
         if not recording and self.fpcalc:
             cached_key = f"acoustid:{path}"

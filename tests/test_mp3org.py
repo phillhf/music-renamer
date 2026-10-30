@@ -163,6 +163,38 @@ class Renaming(Base):
         self.assertEqual(os.listdir(self.root), ["Queen - Song.mp3"])
 
 
+class AcoustidRetry(Base):
+    RECORDING = {"title": "Song", "first-release-date": "1999",
+                 "artist-credit": [{"name": "Band", "artist": {"id": ""}}]}
+
+    def find(self, key=""):
+        with mock.patch.dict(os.environ, {"ACOUSTID_KEY": key}), \
+                mock.patch.object(lookup, "find_fpcalc", return_value="fpcalc.exe"), \
+                mock.patch.object(lookup, "_itunes", return_value=None):
+            return lookup.Lookup(self.db).find("a.mp3", "Band", "Song", 100)
+
+    def test_key_added_later_retries_only_sound_recognition(self):
+        with mock.patch.object(lookup, "_search_mb", return_value=None) as search, \
+                mock.patch.object(lookup, "_acoustid", return_value=self.RECORDING) as acoustid:
+            self.assertIsNone(self.find())
+            searches = search.call_count
+            self.assertEqual(acoustid.call_count, 0)
+
+            result = self.find("key")
+            self.assertEqual((result["year"], result["source"]), ("1999", "acoustid"))
+            self.assertEqual((search.call_count, acoustid.call_count), (searches, 1))
+
+            self.assertEqual(self.find("key")["year"], "1999")
+            self.assertEqual((search.call_count, acoustid.call_count), (searches, 1))
+
+    def test_miss_without_key_is_not_searched_twice(self):
+        with mock.patch.object(lookup, "_search_mb", return_value=None) as search:
+            self.find()
+            searches = search.call_count
+            self.assertIsNone(self.find())
+            self.assertEqual(search.call_count, searches)
+
+
 class Lookup(unittest.TestCase):
     def test_prefers_studio_album_over_compilation(self):
         def recording(date, title, *secondary):
