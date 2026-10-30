@@ -31,18 +31,18 @@ def write_report(name, header, rows):
     return path
 
 
-def default_dupes_dir(root):
-    root = os.path.abspath(root)
-    return f"{root.rstrip(os.sep)}_Dubletten"
+def dupes_dir(args):
+    return os.path.abspath(getattr(args, "ziel", None) or os.path.join(args.ordner, "Dubletten"))
 
 
-def prepare(args, exclude=None):
+def prepare(args):
     root = os.path.abspath(args.ordner)
     if not os.path.isdir(root):
         sys.exit(f"Ordner nicht gefunden: {root}")
     db = library.connect(DB_PATH)
     print(f"Scanne {root} ...")
-    errors = library.scan(root, db, exclude)
+    # Der Dubletten-Ordner liegt in der Sammlung, gehört aber zu keinem Schritt
+    errors = library.scan(root, db, dupes_dir(args))
     if errors:
         path = write_report("defekte-dateien.csv", ("Datei", "Fehler"), errors)
         print(f"{len(errors)} Dateien nicht lesbar, siehe {path}")
@@ -52,8 +52,8 @@ def prepare(args, exclude=None):
 
 
 def cmd_dupes(args):
-    target_dir = os.path.abspath(args.ziel or default_dupes_dir(args.ordner))
-    root, db, tracks = prepare(args, exclude=target_dir)
+    target_dir = dupes_dir(args)
+    root, db, tracks = prepare(args)
     groups = find_duplicates(tracks, db)
     rows, to_move = [], []
     for number, group in enumerate(groups, 1):
@@ -224,7 +224,7 @@ def main():
         return sub
 
     dupes = command("dubletten", cmd_dupes, "Dubletten finden und verschieben")
-    dupes.add_argument("--ziel", help="Zielordner, Standard: <Sammlung>_Dubletten")
+    dupes.add_argument("--ziel", help="Zielordner, Standard: <Sammlung>\\Dubletten")
     dupes.add_argument("--aehnlich", action="store_true", help="auch ähnliche Treffer verschieben")
     tag = command("tags", cmd_tag, "Metadaten suchen und ergänzen")
     tag.add_argument("--ueberschreiben", action="store_true", help="auch vorhandene Tags ersetzen")

@@ -109,11 +109,34 @@ class Duplicates(Base):
         args.apply = True
         cli.cmd_dupes(args)
         self.assertFalse(os.path.exists(self.path("Unter", "a (1).mp3")))
-        moved = os.path.join(self.root + "_Dubletten", "Unter", "a (1).mp3")
+        moved = self.path("Dubletten", "Unter", "a (1).mp3")
         self.assertTrue(os.path.exists(moved))
         cli.cmd_undo(None)
         self.assertTrue(os.path.exists(self.path("Unter", "a (1).mp3")))
         self.assertFalse(os.path.exists(moved))
+
+    def test_moved_files_are_left_alone_by_later_steps(self):
+        tags = {"artist": "A", "title": "T"}
+        make_mp3(self.path("a.mp3"), 1, tags=tags)
+        make_mp3(self.path("b.mp3"), 1, tags=tags)
+        arguments = dict(ordner=self.root, apply=True)
+        cli.cmd_dupes(Namespace(ziel=None, aehnlich=False, **arguments))
+        self.assertEqual(len(os.listdir(self.path("Dubletten"))), 1)
+
+        cli.cmd_rename(Namespace(muster="{artist} - {title}", **arguments))
+        self.assertEqual(os.listdir(self.path("Dubletten")), ["b.mp3"])
+        self.assertTrue(os.path.exists(self.path("A - T.mp3")))
+        self.assertEqual(len(self.tracks_without_dupes()), 1)
+
+        cli.cmd_dupes(Namespace(ziel=None, aehnlich=True, **arguments))
+        self.assertEqual(os.listdir(self.path("Dubletten")), ["b.mp3"])
+
+    def test_collection_at_drive_root_gets_valid_folder(self):
+        self.assertEqual(cli.dupes_dir(Namespace(ordner="C:\\", ziel=None)), "C:\\Dubletten")
+
+    def tracks_without_dupes(self):
+        library.scan(self.root, self.db, self.path("Dubletten"), progress=lambda m: None)
+        return library.load_tracks(self.root, self.db)
 
 
 class Tagging(Base):
