@@ -143,8 +143,8 @@ def _write_vorbis(audio, values):
                 audio.add_picture(_picture(value))
         elif value:
             audio.tags["metadata_block_picture"] = [base64.b64encode(_picture(value).write()).decode()]
-        else:
-            audio.tags.pop("metadata_block_picture", None)
+        elif "metadata_block_picture" in audio.tags:
+            del audio.tags["metadata_block_picture"]
     audio.save()
 
 
