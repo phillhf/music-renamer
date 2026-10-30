@@ -76,6 +76,6 @@ def can_self_update():
 
 
 def start_installer(path):
-    """Startet das Setup; die App muss sich danach selbst beenden."""
-    subprocess.Popen([path, "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART"],
-                     creationflags=subprocess.DETACHED_PROCESS)
+    """Startet das Setup still; es beendet die App und startet sie danach neu."""
+    subprocess.Popen([path, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/RESTARTAPP=1"],
+                     close_fds=True, creationflags=subprocess.DETACHED_PROCESS)

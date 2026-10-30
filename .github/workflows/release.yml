@@ -43,17 +43,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Programm bauen
-        run: python -m PyInstaller --noconfirm --windowed --name MP3Organizer --add-binary "tools\fpcalc.exe;." app.py
-
-      - name: Installer bauen
+      - name: Inno Setup bereitstellen
         shell: pwsh
-        run: |
-          choco install innosetup --no-progress -y
-          iscc "/DAppVersion=${{ steps.version.outputs.version }}" installer\mp3-organizer.iss
+        run: if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+
+      - name: Programm und Installer bauen
+        shell: pwsh
+        run: ./installer/build.ps1 -SkipTests
 
       - name: Release veröffentlichen
         shell: pwsh
-        run: gh release create $env:GITHUB_REF_NAME "dist\MP3-Organizer-Setup-${{ steps.version.outputs.version }}.exe" --generate-notes
+        run: gh release create $env:GITHUB_REF_NAME "dist\MP3-Organizer-Setup-${{ steps.version.outputs.version }}.exe" "dist\MP3-Organizer-Setup-${{ steps.version.outputs.version }}.exe.sha256" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}

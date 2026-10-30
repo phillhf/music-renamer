@@ -3,6 +3,7 @@ import contextlib
 import json
 import os
 import queue
+import sys
 import threading
 import tkinter as tk
 from argparse import Namespace
@@ -45,6 +46,9 @@ class App(tk.Tk):
         self.title(f"MP3 Organizer {__version__}")
         self.geometry("820x620")
         self.minsize(680, 480)
+        icon = os.path.join(getattr(sys, "_MEIPASS", ""), "app.ico")
+        if getattr(sys, "frozen", False) and os.path.exists(icon):
+            self.iconbitmap(icon)
         self.events = queue.Queue()
         self.buttons = []
         settings = load_settings()

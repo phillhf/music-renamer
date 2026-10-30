@@ -6,7 +6,13 @@ Räumt große MP3-Sammlungen unter Windows auf: Dubletten aussortieren, fehlende
 
 Den aktuellen `MP3-Organizer-Setup-x.y.z.exe` von der [Release-Seite](https://github.com/phillhf/mp3-organizer/releases/latest) laden und starten. Adminrechte sind nicht nötig. Der Installer ist nicht signiert, deshalb warnt Windows SmartScreen beim ersten Start („Weitere Informationen“ → „Trotzdem ausführen“).
 
+Der Standardordner ist `C:\Tools\MP3 Organizer`. Das Setup erkennt eine vorhandene Installation und aktualisiert sie, Einstellungen und Berichte bleiben dabei erhalten.
+
 Beim Start prüft das Programm, ob es auf GitHub eine neue Version gibt, und bietet das Update an. Über „Nach Updates suchen“ geht das auch von Hand.
+
+## Deinstallation
+
+Über das Startmenü („MP3 Organizer deinstallieren“) oder die Windows-Einstellungen unter „Installierte Apps“. Der Uninstaller fragt, ob auch Einstellungen, Suchergebnisse, Berichte und Änderungsprotokolle entfernt werden sollen. Deine Musik und der Dubletten-Ordner bleiben in jedem Fall unberührt.
 
 ## Benutzung
 
@@ -45,6 +51,12 @@ python app.py
 ```
 
 Die Befehlszeile gibt es mit `python -m mp3org --help`.
+
+Programm und Installer lokal bauen (braucht PyInstaller und Inno Setup 6):
+
+```bash
+powershell -ExecutionPolicy Bypass -File installer\build.ps1
+```
 
 Für ein Release `__version__` in `mp3org/__init__.py` erhöhen, committen und einen passenden Tag pushen, zum Beispiel `v0.2.0`. GitHub Actions baut daraus den Installer und veröffentlicht ihn.
 

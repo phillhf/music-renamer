@@ -194,6 +194,13 @@ class Updates(unittest.TestCase):
     def test_release_without_installer_is_ignored(self):
         self.assertIsNone(updater.parse_release(self.release("v2.0.0", "notizen.txt"), "1.0.0"))
 
+    def test_installer_restarts_the_app(self):
+        with mock.patch.object(updater.subprocess, "Popen") as popen:
+            updater.start_installer("setup.exe")
+        arguments = popen.call_args.args[0]
+        self.assertIn("/VERYSILENT", arguments)
+        self.assertIn("/RESTARTAPP=1", arguments)
+
     def test_wrong_checksum_is_rejected(self):
         release = updater.Release("1.2.0", "u", "x", "MP3-Organizer-Setup-1.2.0.exe", "sha256:falsch")
         with mock.patch.object(urllib.request, "urlopen", return_value=io.BytesIO(b"daten")) as fake:
