@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import ssl
 import subprocess
 import sys
 import time
@@ -23,6 +24,7 @@ MB_URL = "https://musicbrainz.org/ws/2"
 MIN_SIMILARITY = 0.85
 MAX_DURATION_DIFF = 8.0
 MAX_RECORDINGS = 5
+MAX_RELEASES = 40
 # Mindestwert der Klangerkennung je Stufe
 LEVELS = {"streng": 0.95, "normal": 0.85, "locker": 0.70}
 
@@ -38,12 +40,18 @@ def parse_accuracy(value):
     if not 1 <= percent <= 100:
         raise ValueError(f"Ungültige Genauigkeit: {value} (erlaubt: {', '.join(LEVELS)} oder 1 bis 100)")
     return percent / 100
+
+
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Python 3.14 lehnt die Zertifikatskette von archive.org (dort liegen die Cover) wegen dieser
+# Zusatzregel ab. Zertifikat und Hostname werden weiterhin geprüft.
+SSL_CONTEXT = ssl.create_default_context()
+SSL_CONTEXT.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
 _last_call = {}
 
 
-def _get(url, min_interval, data=None):
+def _fetch(url, min_interval, data=None):
     host = urllib.parse.urlparse(url).netloc
     for attempt in range(4):
         wait = _last_call.get(host, 0) + min_interval - time.monotonic()
@@ -52,8 +60,8 @@ def _get(url, min_interval, data=None):
         _last_call[host] = time.monotonic()
         request = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT})
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return json.load(response)
+            with urllib.request.urlopen(request, timeout=30, context=SSL_CONTEXT) as response:
+                return response.read()
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
                 return None
@@ -63,6 +71,31 @@ def _get(url, min_interval, data=None):
             pass
         time.sleep(2 ** (attempt + 1))
     raise ConnectionError(f"Keine Antwort von {host}")
+
+
+def _get(url, min_interval, data=None):
+    content = _fetch(url, min_interval, data)
+    return json.loads(content) if content else None
+
+
+def fetch_cover(group_id):
+    """Vorderes Cover eines Albums von der Cover Art Archive oder None."""
+    try:
+        image = _fetch(f"https://coverartarchive.org/release-group/{group_id}/front-500", 0.5)
+    except ConnectionError:
+        return None  # ein fehlendes Cover soll den Lauf nicht aufhalten
+    return image if image and image[:3] in (b"\xff\xd8\xff", b"\x89PN") else None
+
+
+def fetch_lyrics(artist, title, album, duration):
+    """Songtext von LRCLIB oder ein leerer Text."""
+    params = urllib.parse.urlencode({"artist_name": artist, "track_name": title, "album_name": album,
+                                     "duration": round(duration or 0)})
+    try:
+        data = _get(f"https://lrclib.net/api/get?{params}", 0.3) or {}
+    except ConnectionError:
+        return ""
+    return (data.get("plainLyrics") or "").strip()
 
 
 def _similar(a, b):
@@ -90,6 +123,19 @@ def _release_rank(release):
             bool(group.get("secondary-types")), release.get("date") or "9999")
 
 
+def _track_number(release):
+    media = release.get("media") or []
+    number = str(media[0]["track"][0].get("number", "")) if media and media[0].get("track") else ""
+    return number if number.isdigit() else ""
+
+
+def _release_entry(release):
+    """Das Wenige, was die Album-Erkennung je Veröffentlichung braucht."""
+    return {"group": release.get("release-group", {}).get("id", ""), "title": release.get("title", ""),
+            "date": release.get("date") or "", "track": _track_number(release),
+            "rank": sum(_release_rank(release)[:3])}
+
+
 def _best_release(recording):
     """Bevorzugt das früheste offizielle Studioalbum."""
     releases = recording.get("releases") or []
@@ -113,15 +159,14 @@ def _top_genre(entity):
 
 def _result_from(recording, source):
     release = _best_release(recording)
-    track = ""
-    media = release.get("media") or []
-    if media and media[0].get("track"):
-        track = str(media[0]["track"][0].get("number", ""))
     date = recording.get("first-release-date") or release.get("date") or ""
     return {"artist": _credit(recording), "title": recording.get("title", ""),
             "album": release.get("title", ""), "year": date[:4],
-            "genre": _top_genre(recording), "track": track if track.isdigit() else "",
-            "source": source,
+            "genre": _top_genre(recording), "track": _track_number(release),
+            "source": source, "group": release.get("release-group", {}).get("id", ""),
+            # Beliebte Titel stehen auf Hunderten Samplern, das Album darf nicht herausfallen
+            "releases": [_release_entry(r) for r in
+                         sorted(recording.get("releases") or [], key=_release_rank)[:MAX_RELEASES]],
             "artist_id": (recording.get("artist-credit") or [{}])[0].get("artist", {}).get("id", "")}
 
 

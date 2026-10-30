@@ -9,18 +9,27 @@ import re
 import sqlite3
 from dataclasses import dataclass
 
-from mutagen.id3 import ID3NoHeaderError
+from mutagen.flac import FLAC
 from mutagen.mp3 import MP3
 
+from .tags import EXTENSIONS, open_audio, read_tags
+
+SCHEMA_VERSION = 2
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS files (
     path TEXT PRIMARY KEY, size INTEGER, mtime REAL,
     duration REAL, bitrate INTEGER,
-    artist TEXT, title TEXT, album TEXT, year TEXT, genre TEXT, track TEXT,
-    audio_start INTEGER, audio_size INTEGER, audio_hash TEXT, error TEXT
+    artist TEXT, title TEXT, album TEXT, albumartist TEXT, year TEXT, genre TEXT, track TEXT,
+    has_cover INTEGER, has_lyrics INTEGER,
+    audio_start INTEGER, audio_size INTEGER, audio_hash TEXT, fingerprint TEXT, error TEXT
 );
 CREATE TABLE IF NOT EXISTS lookups (key TEXT PRIMARY KEY, result TEXT);
 """
+TRACK_COLUMNS = ("path", "size", "duration", "bitrate", "artist", "title", "album", "albumartist",
+                 "year", "genre", "track", "has_cover", "has_lyrics", "audio_start", "audio_size",
+                 "audio_hash", "fingerprint")
+READ_COLUMNS = ("duration", "bitrate", "artist", "title", "album", "albumartist", "year", "genre",
+                "track", "has_cover", "has_lyrics", "audio_start", "audio_size", "audio_hash")
 
 
 @dataclass
@@ -32,12 +41,16 @@ class Track:
     artist: str
     title: str
     album: str
+    albumartist: str
     year: str
     genre: str
     track: str
+    has_cover: int
+    has_lyrics: int
     audio_start: int
     audio_size: int
     audio_hash: str
+    fingerprint: str
 
     @property
     def tag_count(self):
@@ -48,23 +61,27 @@ class Track:
 def connect(db_path):
     os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
     db = sqlite3.connect(db_path)
+    # Die Dateitabelle ist nur ein Cache; die Suchergebnisse bleiben erhalten
+    if db.execute("PRAGMA user_version").fetchone()[0] != SCHEMA_VERSION:
+        db.execute("DROP TABLE IF EXISTS files")
+        db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
     db.executescript(SCHEMA)
     return db
 
 
-def find_mp3s(root, exclude=None):
+def find_audio(root, exclude=None):
     exclude = os.path.normcase(os.path.abspath(exclude)) if exclude else None
     for folder, subdirs, names in os.walk(root):
         if exclude:
             subdirs[:] = [d for d in subdirs if os.path.normcase(
                 os.path.abspath(os.path.join(folder, d))) != exclude]
         for name in names:
-            if name.lower().endswith(".mp3"):
+            if name.lower().endswith(EXTENSIONS):
                 yield os.path.join(folder, name)
 
 
 def audio_range(path):
-    """Liefert (Start, Länge) der reinen Audiodaten ohne ID3-/APE-Tags."""
+    """Liefert (Start, Länge) der reinen MP3-Audiodaten ohne ID3-/APE-Tags."""
     size = os.path.getsize(path)
     start, end = 0, size
     with open(path, "rb") as f:
@@ -100,24 +117,19 @@ def hash_audio(path, start, length):
     return digest.hexdigest()
 
 
-def _first(tags, frame):
-    value = tags.get(frame)
-    return str(value.text[0]).strip() if value and value.text else ""
-
-
 def read_file(path):
-    audio = MP3(path)
-    tags = audio.tags or {}
-    start, length = audio_range(path)
-    year = _first(tags, "TDRC") or _first(tags, "TYER")
-    track = _first(tags, "TRCK")
-    return {
-        "duration": audio.info.length, "bitrate": audio.info.bitrate,
-        "artist": _first(tags, "TPE1"), "title": _first(tags, "TIT2"),
-        "album": _first(tags, "TALB"), "year": year[:4],
-        "genre": _first(tags, "TCON"), "track": track,
-        "audio_start": start, "audio_size": length,
-    }
+    audio = open_audio(path)
+    values = read_tags(audio)
+    values.update(duration=audio.info.length, bitrate=getattr(audio.info, "bitrate", 0) or 0,
+                  audio_hash=None)
+    if isinstance(audio, MP3):
+        values["audio_start"], values["audio_size"] = audio_range(path)
+    else:
+        # Nur MP3 lässt sich hier von den Tags trennen; sonst zählt die ganze Datei
+        values["audio_start"], values["audio_size"] = 0, os.path.getsize(path)
+    if isinstance(audio, FLAC) and audio.info.md5_signature:
+        values["audio_hash"] = f"flac:{audio.info.md5_signature:032x}"
+    return values
 
 
 def scan(root, db, exclude=None, progress=print):
@@ -126,7 +138,7 @@ def scan(root, db, exclude=None, progress=print):
              db.execute("SELECT path, size, mtime FROM files WHERE path LIKE ? ESCAPE '\\'",
                         (_prefix(root),))}
     seen, errors, read = set(), [], 0
-    for path in find_mp3s(root, exclude):
+    for path in find_audio(root, exclude):
         seen.add(path)
         try:
             stat = os.stat(path)
@@ -138,21 +150,17 @@ def scan(root, db, exclude=None, progress=print):
         read += 1
         if read % 500 == 0:
             progress(f"  {read} Dateien gelesen ...")
-        row = dict.fromkeys(("duration", "bitrate", "artist", "title", "album", "year",
-                             "genre", "track", "audio_start", "audio_size"))
+        row = dict.fromkeys(READ_COLUMNS)
         error = None
         try:
             row = read_file(path)
-        except ID3NoHeaderError:
-            pass
         except Exception as exc:  # defekte Dateien dürfen den Lauf nicht abbrechen
             error = f"{type(exc).__name__}: {exc}"
             errors.append((path, error))
-        db.execute(
-            "INSERT OR REPLACE INTO files VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,?)",
-            (path, stat.st_size, stat.st_mtime, row["duration"], row["bitrate"],
-             row["artist"], row["title"], row["album"], row["year"], row["genre"],
-             row["track"], row["audio_start"], row["audio_size"], error))
+        marks = ",".join("?" * (len(READ_COLUMNS) + 4))
+        db.execute(f"INSERT OR REPLACE INTO files (path, size, mtime, {', '.join(READ_COLUMNS)}, error)"
+                   f" VALUES ({marks})",
+                   (path, stat.st_size, stat.st_mtime, *[row[c] for c in READ_COLUMNS], error))
     for path in set(known) - seen:
         db.execute("DELETE FROM files WHERE path = ?", (path,))
     db.commit()
@@ -166,8 +174,7 @@ def _prefix(root):
 
 def load_tracks(root, db):
     rows = db.execute(
-        "SELECT path, size, duration, bitrate, artist, title, album, year, genre, track,"
-        " audio_start, audio_size, audio_hash FROM files"
+        f"SELECT {', '.join(TRACK_COLUMNS)} FROM files"
         " WHERE error IS NULL AND audio_size IS NOT NULL AND path LIKE ? ESCAPE '\\'"
         " ORDER BY path", (_prefix(root),))
     return [Track(*[("" if v is None else v) for v in row]) for row in rows]

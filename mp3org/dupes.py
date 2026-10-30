@@ -1,14 +1,16 @@
 """Findet Dubletten und wählt je Gruppe die beste Datei aus.
 
 "exakt":    identische Audiodaten, nur Tags oder Name unterscheiden sich.
-"aehnlich": gleicher Interpret und Titel bei fast gleicher Länge, z. B. dieselbe
-            Aufnahme in anderer Bitrate. Das kann auch eine Fehlzuordnung sein,
-            darum werden diese Treffer nur auf ausdrücklichen Wunsch verschoben.
+"klang":    gleiche Aufnahme laut akustischem Fingerabdruck, auch in anderer Bitrate
+            oder anderem Format. Läuft nur auf Wunsch, weil es jede Datei analysiert.
+"aehnlich": gleicher Interpret und Titel bei fast gleicher Länge. Das kann auch eine
+            Fehlzuordnung sein, darum werden diese Treffer nur auf Wunsch verschoben.
 """
 import os
 from collections import defaultdict
 from dataclasses import dataclass
 
+from .fingerprint import find_groups
 from .library import hash_audio
 from .names import COPY_SUFFIX, identify, normalize
 
@@ -60,7 +62,7 @@ def _make_group(kind, tracks):
     return Group(kind, ordered[0], ordered[1:])
 
 
-def find_duplicates(tracks, db, progress=print):
+def find_duplicates(tracks, db, progress=print, fpcalc=None):
     _ensure_hashes(tracks, db, progress)
     groups, remaining = [], {}
     by_hash = defaultdict(list)
@@ -76,6 +78,13 @@ def find_duplicates(tracks, db, progress=print):
             remaining[group.keep.path] = group.keep
         else:
             remaining[same[0].path] = same[0]
+
+    if fpcalc:
+        for same in find_groups(list(remaining.values()), db, fpcalc, progress):
+            group = _make_group("klang", same)
+            groups.append(group)
+            for track in group.duplicates:
+                del remaining[track.path]
 
     by_name = defaultdict(list)
     for track in remaining.values():

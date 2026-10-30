@@ -3,13 +3,16 @@ import argparse
 import csv
 import os
 import sys
+from collections import Counter
 
 from . import __version__, updater
 from . import journal as journaling
 from . import library
+from .albums import align_albums
 from .dupes import find_duplicates
-from .lookup import Lookup
+from .lookup import Lookup, fetch_cover, fetch_lyrics, find_fpcalc
 from .names import clean, identify, safe_filename
+from .tags import FIELDS as TAG_FIELDS
 from .tags import write_tags
 
 # Nicht im Programmordner: der wird bei Updates ersetzt
@@ -17,7 +20,9 @@ APP_DIR = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
 DATA_DIR = os.path.join(APP_DIR, "data")
 REPORT_DIR = os.path.join(APP_DIR, "berichte")
 DB_PATH = os.path.join(DATA_DIR, "mp3org.sqlite")
-TAG_FIELDS = ("artist", "title", "album", "year", "genre", "track")
+UNKNOWN_ALBUM = "Unbekanntes Album"
+PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist}/{album}/{track} - {title}",
+            "{albumartist}/{year} - {album}/{track} - {title}")
 
 
 def write_report(name, header, rows):
@@ -47,17 +52,23 @@ def prepare(args):
         path = write_report("defekte-dateien.csv", ("Datei", "Fehler"), errors)
         print(f"{len(errors)} Dateien nicht lesbar, siehe {path}")
     tracks = library.load_tracks(root, db)
-    print(f"{len(tracks)} MP3-Dateien erkannt.")
+    print(f"{len(tracks)} Audiodateien erkannt.")
     return root, db, tracks
 
 
 def cmd_dupes(args):
     target_dir = dupes_dir(args)
     root, db, tracks = prepare(args)
-    groups = find_duplicates(tracks, db)
+    fpcalc = None
+    if getattr(args, "klang", False):
+        fpcalc = find_fpcalc()
+        if not fpcalc:
+            sys.exit("Für den Klangvergleich fehlt fpcalc.")
+        print("Klangvergleich läuft, das dauert je Datei etwa eine Sekunde ...")
+    groups = find_duplicates(tracks, db, fpcalc=fpcalc)
     rows, to_move = [], []
     for number, group in enumerate(groups, 1):
-        move = group.kind == "exakt" or args.aehnlich
+        move = group.kind != "aehnlich" or args.aehnlich
         rows.append((number, group.kind, "BEHALTEN", group.keep.path, group.keep.bitrate // 1000,
                      round(group.keep.duration or 0)))
         for track in group.duplicates:
@@ -67,9 +78,11 @@ def cmd_dupes(args):
                 to_move.append(track)
     report = write_report("dubletten.csv",
                           ("Gruppe", "Art", "Aktion", "Datei", "kbit/s", "Sekunden"), rows)
-    exact = sum(len(g.duplicates) for g in groups if g.kind == "exakt")
-    similar = sum(len(g.duplicates) for g in groups if g.kind == "aehnlich")
-    print(f"{exact} exakte und {similar} ähnliche Dubletten. Bericht: {report}")
+    count = Counter()
+    for group in groups:
+        count[group.kind] += len(group.duplicates)
+    print(f"{count['exakt']} exakte, {count['klang']} klanggleiche und {count['aehnlich']} ähnliche Dubletten. "
+          f"Bericht: {report}")
     if not args.apply:
         print(f"Vorschau: {len(to_move)} Dateien würden nach {target_dir} verschoben.")
         return
@@ -109,13 +122,16 @@ def cmd_tag(args):
         print(f"Klangerkennung aktiv, Mindestwert {lookup.min_score * 100:g} %.")
     else:
         print("Hinweis: ohne ACOUSTID_KEY und fpcalc läuft die Suche nur über Name und Tags.")
-    plan, unresolved, rows = [], [], []
+    wants_cover = getattr(args, "cover", False)
+    wants_lyrics = getattr(args, "songtexte", False)
+    matches, unresolved = [], []
     for number, track in enumerate(tracks, 1):
         if number % 25 == 0:
             print(f"  {number}/{len(tracks)} ...")
         artist, title = identify(track)
         complete = all(clean(getattr(track, f)) for f in ("artist", "title", "album", "year", "genre"))
-        if complete and not args.ueberschreiben:
+        extras_missing = (wants_cover and not track.has_cover) or (wants_lyrics and not track.has_lyrics)
+        if complete and not args.ueberschreiben and not extras_missing:
             continue
         try:
             found = lookup.find(track.path, artist, title, track.duration)
@@ -124,50 +140,101 @@ def cmd_tag(args):
         if not found or found.get("rejected"):
             unresolved.append((track.path, artist, title, (found or {}).get("score", "")))
             continue
+        matches.append((track, found))
+    aligned = align_albums(matches)
+    plan, rows = [], []
+    for track, found in matches:
         changes = planned_changes(track, found, args.ueberschreiben)
-        if changes:
-            plan.append((track, changes))
+        cover = wants_cover and not track.has_cover and bool(found.get("group"))
+        lyrics = wants_lyrics and not track.has_lyrics
+        if changes or cover or lyrics:
+            plan.append((track, found, changes, cover, lyrics))
             rows.append((track.path, found["source"], found.get("score", ""),
-                         *[changes.get(f, "") for f in TAG_FIELDS]))
-    report = write_report("tags-vorschau.csv", ("Datei", "Quelle", "Trefferwert %", *TAG_FIELDS), rows)
+                         *[changes.get(f, "") for f in TAG_FIELDS],
+                         "ja" if cover else "", "ja" if lyrics else ""))
+    report = write_report("tags-vorschau.csv", ("Datei", "Quelle", "Trefferwert %", *TAG_FIELDS,
+                                                "Cover", "Songtext"), rows)
     review = write_report("nicht-gefunden.csv", ("Datei", "Interpret", "Titel", "Trefferwert %"), unresolved)
-    print(f"{len(plan)} Dateien bekommen neue Tags, {len(unresolved)} ohne sicheren Treffer.")
+    print(f"{len(plan)} Dateien bekommen neue Daten, {len(unresolved)} ohne sicheren Treffer, "
+          f"{aligned} Titel einem Album zugeordnet.")
     print(f"Berichte: {report} und {review}")
     if not args.apply:
         print("Vorschau: nichts geändert.")
         return
     journal = journaling.Journal(DATA_DIR, "tags")
-    for track, changes in plan:
-        old = {field: getattr(track, field) for field in changes}
+    covers = {}
+    saved = covers_saved = lyrics_saved = 0
+    for track, found, changes, cover, lyrics in plan:
+        changes = dict(changes)
         try:
-            journal.record(action="tag", path=track.path, old=old, new=changes)
+            if cover:
+                if found["group"] not in covers:
+                    covers[found["group"]] = fetch_cover(found["group"])
+                if covers[found["group"]]:
+                    changes["cover"] = covers[found["group"]]
+            if lyrics:
+                text = fetch_lyrics(changes.get("artist") or found["artist"], changes.get("title") or found["title"],
+                                    changes.get("album") or found["album"], track.duration)
+                if text:
+                    changes["lyrics"] = text
+            if not changes:
+                continue
+            # Cover und Songtexte kommen nur dazu, wenn keine da waren; zurücknehmen heißt entfernen
+            old = {field: getattr(track, field, "") for field in changes}
+            journal.record(action="tag", path=track.path, old=old,
+                           new={f: v for f, v in changes.items() if f not in ("cover", "lyrics")})
             write_tags(track.path, changes)
+            saved += 1
+            covers_saved += "cover" in changes
+            lyrics_saved += "lyrics" in changes
         except Exception as exc:
             print(f"Fehler bei {track.path}: {exc}")
     journal.close()
-    print(f"{len(plan)} Dateien getaggt.")
+    print(f"{saved} Dateien gespeichert, davon {covers_saved} mit Cover und {lyrics_saved} mit Songtext.")
+
+
+def check_pattern(pattern):
+    try:
+        pattern.format(**dict.fromkeys(TAG_FIELDS, "x"))
+    except (KeyError, ValueError, IndexError):
+        sys.exit(f"Ungültiges Muster: {pattern}. Erlaubt sind " + ", ".join(f"{{{f}}}" for f in TAG_FIELDS))
 
 
 def target_name(track, pattern):
     values = {f: clean(getattr(track, f)) for f in TAG_FIELDS}
     if not (values["artist"] and values["title"]):
         return None
-    if "{track}" in pattern and values["track"]:
-        values["track"] = values["track"].split("/")[0].zfill(2)
-    parts = [safe_filename(p.format(**values)) for p in pattern.split("/")]
-    return os.path.join(*parts) + ".mp3" if all(parts) else None
+    values["albumartist"] = values["albumartist"] or values["artist"]
+    values["album"] = values["album"] or UNKNOWN_ALBUM
+    values["track"] = values["track"].split("/")[0].zfill(2) if values["track"] else ""
+    # Fehlt z. B. die Tracknummer, soll kein Name mit " - " beginnen
+    parts = [safe_filename(p.format(**values)).strip(" -") for p in pattern.split("/")]
+    return os.path.join(*parts) + os.path.splitext(track.path)[1].lower() if all(parts) else None
+
+
+def remove_empty_folders(folder, root):
+    """Entfernt Ordner, die das Umsortieren geleert hat, aber nie die Sammlung selbst."""
+    while os.path.normcase(folder) != os.path.normcase(root) and folder.startswith(root):
+        try:
+            os.rmdir(folder)
+        except OSError:
+            return
+        folder = os.path.dirname(folder)
 
 
 def cmd_rename(args):
+    check_pattern(args.muster)
     root, db, tracks = prepare(args)
     rows, plan, skipped = [], [], 0
     taken = {os.path.normcase(t.path) for t in tracks}
+    # Ein Muster mit Ordnern sortiert die ganze Sammlung, sonst bleibt jede Datei in ihrem Ordner
+    sorts = "/" in args.muster
     for track in tracks:
         name = target_name(track, args.muster)
         if not name:
             skipped += 1
             continue
-        target = os.path.join(os.path.dirname(track.path), name)
+        target = os.path.join(root if sorts else os.path.dirname(track.path), name)
         if target == track.path:
             continue
         taken.discard(os.path.normcase(track.path))
@@ -192,6 +259,7 @@ def cmd_rename(args):
             continue
         try:
             journaling.move_file(source, target, journal)
+            remove_empty_folders(os.path.dirname(source), root)
             done += 1
         except OSError as exc:
             print(f"Fehler bei {source}: {exc}")
@@ -219,12 +287,12 @@ def cmd_update(args):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    parser = argparse.ArgumentParser(prog="mp3org", description="MP3-Sammlung aufräumen")
+    parser = argparse.ArgumentParser(prog="mp3org", description="Musiksammlung aufräumen")
     commands = parser.add_subparsers(dest="command", required=True)
 
     def command(name, handler, help_text):
         sub = commands.add_parser(name, help=help_text)
-        sub.add_argument("ordner", help="Ordner der MP3-Sammlung")
+        sub.add_argument("ordner", help="Ordner der Musiksammlung")
         sub.add_argument("--apply", action="store_true", help="Änderungen wirklich ausführen")
         sub.set_defaults(handler=handler)
         return sub
@@ -232,14 +300,17 @@ def main():
     dupes = command("dubletten", cmd_dupes, "Dubletten finden und verschieben")
     dupes.add_argument("--ziel", help="Zielordner, Standard: <Sammlung>\\Dubletten")
     dupes.add_argument("--aehnlich", action="store_true", help="auch ähnliche Treffer verschieben")
+    dupes.add_argument("--klang", action="store_true", help="am Klang vergleichen (langsam)")
     tag = command("tags", cmd_tag, "Metadaten suchen und ergänzen")
     tag.add_argument("--ueberschreiben", action="store_true", help="auch vorhandene Tags ersetzen")
     tag.add_argument("--limit", type=int, help="nur die ersten N Dateien (zum Ausprobieren)")
     tag.add_argument("--genauigkeit", default="normal",
                      help="Mindestwert der Klangerkennung: streng, normal, locker oder Prozentzahl")
+    tag.add_argument("--cover", action="store_true", help="fehlende Cover einbetten")
+    tag.add_argument("--songtexte", action="store_true", help="fehlende Songtexte einbetten")
     rename = command("umbenennen", cmd_rename, "Dateien nach Tags benennen")
-    rename.add_argument("--muster", default="{artist} - {title}",
-                        help='Standard "{artist} - {title}"; / erzeugt Unterordner')
+    rename.add_argument("--muster", default=PATTERNS[0],
+                        help=f'Standard "{PATTERNS[0]}"; / sortiert die Sammlung in Unterordner')
     undo = commands.add_parser("undo", help="letzten ausgeführten Schritt zurücknehmen")
     undo.set_defaults(handler=cmd_undo)
     update = commands.add_parser("update", help="auf GitHub nach einer neuen Version suchen")

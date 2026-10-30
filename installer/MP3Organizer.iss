@@ -56,8 +56,8 @@ de.WelcomeLabel1=Willkommen bei MP3 Organizer
 en.WelcomeLabel1=Welcome to MP3 Organizer
 
 [CustomMessages]
-de.Welcome=Dieses Setup installiert MP3 Organizer {#AppVersion}.%n%nMP3 Organizer räumt MP3-Sammlungen auf: Dubletten aussortieren, fehlende Metadaten wie Jahr und Genre ergänzen und Dateien einheitlich benennen.%n%nEs werden keine Administratorrechte benötigt.
-en.Welcome=This setup installs MP3 Organizer {#AppVersion}.%n%nMP3 Organizer tidies up MP3 collections: it sorts out duplicates, fills in missing metadata such as year and genre, and gives files consistent names.%n%nNo administrator rights are required.
+de.Welcome=Dieses Setup installiert MP3 Organizer {#AppVersion}.%n%nMP3 Organizer räumt Musiksammlungen auf: Dubletten aussortieren, fehlende Metadaten, Cover und Songtexte ergänzen und Dateien einheitlich benennen und sortieren.%n%nEs werden keine Administratorrechte benötigt.
+en.Welcome=This setup installs MP3 Organizer {#AppVersion}.%n%nMP3 Organizer tidies up music collections: it sorts out duplicates, fills in missing metadata, covers and lyrics, and gives files consistent names and folders.%n%nNo administrator rights are required.
 de.WelcomeUpdate=MP3 Organizer %1 ist bereits installiert in%n%2%n%nDas Setup aktualisiert auf Version {#AppVersion}. Einstellungen, Suchergebnisse und Berichte bleiben erhalten.
 en.WelcomeUpdate=MP3 Organizer %1 is already installed in%n%2%n%nThis setup updates it to version {#AppVersion}. Settings, lookup results and reports are kept.
 de.NewerInstalled=Installiert ist bereits die neuere Version %1.%n%nTrotzdem die ältere Version {#AppVersion} einspielen?

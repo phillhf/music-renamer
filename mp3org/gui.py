@@ -11,6 +11,7 @@ from argparse import Namespace
 from tkinter import filedialog, messagebox, ttk
 
 from . import __version__, cli, journal, updater
+from .editor import TagEditor
 from .lookup import LEVELS, parse_accuracy
 
 SETTINGS_PATH = os.path.join(cli.APP_DIR, "einstellungen.json")
@@ -54,8 +55,8 @@ class App(tk.Tk):
     def __init__(self, auto_update_check=True):
         super().__init__()
         self.title(f"MP3 Organizer {__version__}")
-        self.geometry("820x620")
-        self.minsize(680, 480)
+        self.geometry("820x700")
+        self.minsize(700, 600)
         icon = os.path.join(getattr(sys, "_MEIPASS", ""), "app.ico")
         if getattr(sys, "frozen", False) and os.path.exists(icon):
             self.iconbitmap(icon)
@@ -68,7 +69,11 @@ class App(tk.Tk):
         self.accuracy = tk.StringVar(value=level_label(saved_level if saved_level in LEVELS else "normal"))
         self.custom_accuracy = tk.StringVar(value=settings.get("eigene_genauigkeit", ""))
         self.similar = tk.BooleanVar(value=False)
+        self.sound = tk.BooleanVar(value=False)
         self.overwrite = tk.BooleanVar(value=False)
+        self.cover = tk.BooleanVar(value=settings.get("cover", False))
+        self.lyrics = tk.BooleanVar(value=settings.get("songtexte", False))
+        self.pattern = tk.StringVar(value=settings.get("muster", cli.PATTERNS[0]))
         self._build()
         self.after(100, self._drain_events)
         if auto_update_check:
@@ -78,20 +83,28 @@ class App(tk.Tk):
         main = ttk.Frame(self, padding=12)
         main.pack(fill="both", expand=True)
         main.columnconfigure(1, weight=1)
-        main.rowconfigure(6, weight=1)
+        main.rowconfigure(7, weight=1)
 
         ttk.Label(main, text="Sammlung:").grid(row=0, column=0, sticky="w")
         ttk.Entry(main, textvariable=self.folder).grid(row=0, column=1, sticky="ew", padx=6)
         ttk.Button(main, text="Auswählen ...", command=self._choose).grid(row=0, column=2, sticky="ew")
 
         self._step(main, 1, "1. Dubletten verschieben", self._dupes)
-        ttk.Checkbutton(main, text="Auch ähnliche Dubletten (gleicher Titel, andere Datei)",
-                        variable=self.similar).grid(row=2, column=0, columnspan=3, sticky="w", pady=(0, 6))
+        dupes = ttk.Frame(main)
+        dupes.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 6))
+        ttk.Checkbutton(dupes, text="Am Klang vergleichen (findet auch andere Bitraten und Formate, langsamer)",
+                        variable=self.sound).pack(anchor="w")
+        ttk.Checkbutton(dupes, text="Auch ähnliche Dubletten (gleicher Titel, andere Datei)",
+                        variable=self.similar).pack(anchor="w")
         self._step(main, 3, "2. Metadaten ergänzen", self._tags)
         options = ttk.Frame(main)
         options.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 6))
         ttk.Checkbutton(options, text="Vorhandene Tags ersetzen statt nur leere Felder füllen",
                         variable=self.overwrite).pack(anchor="w")
+        extras = ttk.Frame(options)
+        extras.pack(anchor="w")
+        ttk.Checkbutton(extras, text="Fehlende Cover einbetten", variable=self.cover).pack(side="left")
+        ttk.Checkbutton(extras, text="Fehlende Songtexte einbetten", variable=self.lyrics).pack(side="left", padx=(12, 0))
         accuracy = ttk.Frame(options)
         accuracy.pack(anchor="w", pady=(4, 0))
         ttk.Label(accuracy, text="Genauigkeit Klangerkennung:").pack(side="left", padx=(0, 4))
@@ -103,20 +116,27 @@ class App(tk.Tk):
         ttk.Label(accuracy, text="%").pack(side="left", padx=(2, 0))
         self.custom_accuracy.trace_add("write", self._update_level_box)
         self._update_level_box()
-        self._step(main, 5, "3. Dateien umbenennen", self._rename)
+        key_row = ttk.Frame(options)
+        key_row.pack(anchor="w", pady=(4, 0))
+        self._step(main, 5, "3. Dateien umbenennen und sortieren", self._rename)
+        rename = ttk.Frame(main)
+        rename.grid(row=6, column=0, columnspan=3, sticky="ew")
+        ttk.Label(rename, text="Muster:").pack(side="left", padx=(0, 4))
+        ttk.Combobox(rename, textvariable=self.pattern, values=cli.PATTERNS).pack(side="left", fill="x", expand=True)
 
-        self.log = tk.Text(main, height=12, state="disabled", wrap="word")
-        self.log.grid(row=6, column=0, columnspan=3, sticky="nsew", pady=8)
+        self.log = tk.Text(main, height=8, state="disabled", wrap="word")
+        self.log.grid(row=7, column=0, columnspan=3, sticky="nsew", pady=8)
 
         bottom = ttk.Frame(main)
-        bottom.grid(row=7, column=0, columnspan=3, sticky="ew")
+        bottom.grid(row=8, column=0, columnspan=3, sticky="ew")
         self._button(bottom, "Letzten Schritt rückgängig", self._undo).pack(side="left")
         ttk.Button(bottom, text="Berichte öffnen", command=self._open_reports).pack(side="left", padx=6)
         self._button(bottom, "Nach Updates suchen",
                      lambda: self._run_background(self._check_update, quiet=False)).pack(side="left")
-        ttk.Label(bottom, text="AcoustID-Key:").pack(side="left", padx=(12, 4))
-        ttk.Entry(bottom, textvariable=self.acoustid_key, width=14, show="*").pack(side="left")
-        link = tk.Label(bottom, text="Key holen", fg="#0a58ca", cursor="hand2",
+        self._button(bottom, "Tag-Editor", self._open_editor).pack(side="left", padx=6)
+        ttk.Label(key_row, text="AcoustID-Key:").pack(side="left", padx=(0, 4))
+        ttk.Entry(key_row, textvariable=self.acoustid_key, width=24, show="*").pack(side="left")
+        link = tk.Label(key_row, text="Key holen", fg="#0a58ca", cursor="hand2",
                         font=("Segoe UI", 9, "underline"))
         link.pack(side="left", padx=(6, 0))
         link.bind("<Button-1>", lambda event: webbrowser.open(ACOUSTID_KEY_URL))
@@ -161,6 +181,8 @@ class App(tk.Tk):
                     button.configure(state="disabled" if value else "normal")
             elif kind == "offer_update":
                 self._offer_update(value)
+            elif kind == "editor":
+                TagEditor(self, value)
             elif kind == "quit":
                 self.destroy()
                 return
@@ -189,14 +211,16 @@ class App(tk.Tk):
             return
         settings = {"ordner": folder, "acoustid_key": self.acoustid_key.get().strip(),
                     "genauigkeit": LEVEL_LABELS[self.accuracy.get()],
-                    "eigene_genauigkeit": self.custom_accuracy.get().strip()}
+                    "eigene_genauigkeit": self.custom_accuracy.get().strip(),
+                    "cover": self.cover.get(), "songtexte": self.lyrics.get(),
+                    "muster": self.pattern.get().strip()}
         save_settings(settings)
         os.environ["ACOUSTID_KEY"] = settings["acoustid_key"]
         self._run_background(command, Namespace(ordner=folder, apply=apply, **options))
 
     def _dupes(self, apply):
         self._start(cli.cmd_dupes, apply, "Dubletten jetzt in den Dubletten-Ordner verschieben?",
-                    ziel=None, aehnlich=self.similar.get())
+                    ziel=None, aehnlich=self.similar.get(), klang=self.sound.get())
 
     def _tags(self, apply):
         accuracy = self.custom_accuracy.get().strip() or LEVEL_LABELS[self.accuracy.get()]
@@ -206,14 +230,25 @@ class App(tk.Tk):
             messagebox.showerror("MP3 Organizer", "Bitte als eigenen Wert eine Zahl von 1 bis 100 eintragen.")
             return
         self._start(cli.cmd_tag, apply, "Tags jetzt in die Dateien schreiben?",
-                    ueberschreiben=self.overwrite.get(), limit=None, genauigkeit=accuracy)
+                    ueberschreiben=self.overwrite.get(), limit=None, genauigkeit=accuracy,
+                    cover=self.cover.get(), songtexte=self.lyrics.get())
+
+    def _open_editor(self):
+        folder = self.folder.get().strip()
+        if not folder:
+            messagebox.showinfo("MP3 Organizer", "Bitte zuerst die Sammlung auswählen.")
+            return
+        self._run_background(self._load_editor, folder)
+
+    def _load_editor(self, folder):
+        self.events.put(("editor", cli.prepare(Namespace(ordner=folder))[2]))
 
     def _update_level_box(self, *unused):
         # Ein eigener Wert hat Vorrang, die Stufe gilt dann nicht
         self.level_box.configure(state="disabled" if self.custom_accuracy.get().strip() else "readonly")
 
     def _rename(self, apply):
-        self._start(cli.cmd_rename, apply, "Dateien jetzt umbenennen?", muster="{artist} - {title}")
+        self._start(cli.cmd_rename, apply, "Dateien jetzt umbenennen?", muster=self.pattern.get().strip())
 
     def _undo(self):
         if messagebox.askyesno("MP3 Organizer", "Den zuletzt ausgeführten Schritt zurücknehmen?"):
