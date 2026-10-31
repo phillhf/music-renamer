@@ -35,6 +35,11 @@ cp -R "$app" "$stage/"
 ln -s /Applications "$stage/Applications"
 
 dmg="dist/Music-Renamer-$version-macOS-$arch.dmg"
-hdiutil create -volname "Music Renamer" -srcfolder "$stage" -ov -format UDZO "$dmg"
+# hdiutil scheitert gelegentlich mit "Resource busy", wenn das System die Dateien noch prüft
+for attempt in 1 2 3 4 5; do
+    hdiutil create -volname "Music Renamer" -srcfolder "$stage" -ov -format UDZO "$dmg" && break
+    [ "$attempt" -lt 5 ] || exit 1
+    sleep 10
+done
 (cd dist && shasum -a 256 "$(basename "$dmg")" > "$(basename "$dmg").sha256")
 ls -lh "$dmg"
