@@ -121,6 +121,13 @@ def main():
     # Vorschau fuer die Doku
     with open(os.path.join(os.path.dirname(OUT), "app_256.png"), "wb") as f:
         f.write(images[-1][1])
+    # macOS: eigenes Containerformat, die Bilder bleiben PNG
+    entries = b""
+    for kind, size in ((b"ic07", 128), (b"ic08", 256), (b"ic09", 512)):
+        img = png(size, render(size))
+        entries += kind + struct.pack(">I", len(img) + 8) + img
+    with open(OUT.replace(".ico", ".icns"), "wb") as f:
+        f.write(b"icns" + struct.pack(">I", len(entries) + 8) + entries)
     print(f"{OUT} geschrieben ({len(images)} Groessen)")
 
 

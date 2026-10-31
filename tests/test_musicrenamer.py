@@ -321,10 +321,29 @@ class DataFolder(unittest.TestCase):
 
 
 class Updates(unittest.TestCase):
+    def setUp(self):
+        for patcher in (mock.patch.object(updater, "ASSET_PATTERN", updater.asset_pattern(False, "AMD64")),
+                        mock.patch.object(updater.system, "MACOS", False)):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
     def release(self, tag, name="Music-Renamer-Setup-1.2.0.exe"):
         return {"tag_name": tag, "html_url": "u", "assets": [
             {"name": "quelle.zip", "browser_download_url": "z"},
             {"name": name, "browser_download_url": "x", "digest": "sha256:ab"}]}
+
+    def test_mac_gets_the_build_for_its_processor(self):
+        names = ["Music-Renamer-Setup-1.2.0.exe", "Music-Renamer-1.2.0-macOS-arm64.dmg",
+                 "Music-Renamer-1.2.0-macOS-intel.dmg"]
+        chosen = {machine: [n for n in names if updater.asset_pattern(True, machine).match(n)]
+                  for machine in ("arm64", "x86_64")}
+        self.assertEqual(chosen, {"arm64": names[1:2], "x86_64": names[2:]})
+
+    def test_mac_opens_the_disk_image(self):
+        with mock.patch.object(updater.system, "MACOS", True), \
+                mock.patch.object(updater.subprocess, "Popen") as popen:
+            updater.start_installer("x.dmg")
+        popen.assert_called_once_with(["open", "x.dmg"])
 
     def test_newer_version_is_offered(self):
         release = updater.parse_release(self.release("v1.2.0"), "1.1.9")

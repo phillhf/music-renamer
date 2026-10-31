@@ -11,7 +11,7 @@ import webbrowser
 from argparse import Namespace
 from tkinter import filedialog, messagebox, ttk
 
-from . import __version__, cli, genres, i18n, journal, updater
+from . import __version__, cli, genres, i18n, journal, system, updater
 from .editor import TagEditor
 from .i18n import format_duration, t
 from .job import Cancelled, job
@@ -223,10 +223,10 @@ class App(tk.Tk):
 
     def _open_reports(self):
         os.makedirs(cli.REPORT_DIR, exist_ok=True)
-        os.startfile(cli.REPORT_DIR)
+        system.open_path(cli.REPORT_DIR)
 
     def _open_rules(self):
-        os.startfile(genres.ensure_rules_file(cli.APP_DIR))
+        system.open_path(genres.ensure_rules_file(cli.APP_DIR))
 
     def _language_changed(self, event=None):
         self._save()
@@ -373,9 +373,14 @@ class App(tk.Tk):
         if not updater.can_self_update():
             self._print(t("Neue Version {version}: {page}", version=release.version, page=release.page))
             return
-        if messagebox.askyesno(t("Update verfügbar"), t(
-                "Version {new} ist verfügbar (installiert: {old}).\nJetzt herunterladen und installieren?",
-                new=release.version, old=__version__)):
+        versions = {"new": release.version, "old": __version__}
+        if system.MACOS:
+            question = t("Version {new} ist verfügbar (installiert: {old}).\nJetzt herunterladen?\n\nDas Programm schließt sich. Ziehe die neue Version danach in den Programme-Ordner.",
+                         **versions)
+        else:
+            question = t("Version {new} ist verfügbar (installiert: {old}).\nJetzt herunterladen und installieren?",
+                         **versions)
+        if messagebox.askyesno(t("Update verfügbar"), question):
             self._run_background(self._install_update, release)
 
     def _install_update(self, release):

@@ -10,7 +10,11 @@ permissions:
 
 jobs:
   tests:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -19,6 +23,7 @@ jobs:
       - run: python -m pip install -r requirements.txt
       # Für die Prüfung mit echten Audiodateien in tests/test_real_audio.py
       - name: ffmpeg und fpcalc holen
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           choco install ffmpeg -y --no-progress
@@ -26,6 +31,17 @@ jobs:
           Expand-Archive fpcalc.zip fpcalc
           New-Item -ItemType Directory -Force tools | Out-Null
           Get-ChildItem fpcalc -Recurse -Filter fpcalc.exe | Copy-Item -Destination tools\
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: ffmpeg und fpcalc holen
+        if: runner.os == 'macOS'
+        run: |
+          brew install ffmpeg
+          gh release download v1.5.1 --repo acoustid/chromaprint --pattern "chromaprint-fpcalc-1.5.1-macos-universal.tar.gz" --output fpcalc.tar.gz
+          mkdir -p tools fpcalc
+          tar xzf fpcalc.tar.gz -C fpcalc
+          find fpcalc -name fpcalc -type f -exec cp {} tools/ \;
+          chmod +x tools/fpcalc
         env:
           GH_TOKEN: ${{ github.token }}
       - run: python -m unittest discover -s tests -v

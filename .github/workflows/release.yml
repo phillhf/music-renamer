@@ -2,15 +2,17 @@ name: Release
 
 # Startet mit einem Versions-Tag: git tag v0.2.0 && git push origin v0.2.0
 # Der Tag muss zu __version__ in musicrenamer/__init__.py passen.
+# Von Hand gestartet baut es nur und veröffentlicht nichts.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -30,7 +32,7 @@ jobs:
         shell: pwsh
         run: |
           $version = python -c "import musicrenamer; print(musicrenamer.__version__)"
-          if ("v$version" -ne $env:GITHUB_REF_NAME) { throw "Tag $env:GITHUB_REF_NAME passt nicht zu Version $version" }
+          if ($env:GITHUB_REF_TYPE -eq "tag" -and "v$version" -ne $env:GITHUB_REF_NAME) { throw "Tag $env:GITHUB_REF_NAME passt nicht zu Version $version" }
           "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: fpcalc holen
@@ -51,12 +53,89 @@ jobs:
         shell: pwsh
         run: ./installer/build.ps1 -SkipTests
 
-      - name: Release veröffentlichen
+      - name: Kopie unter altem Namen
         shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.version }}"
           # Versionen bis 0.5.0 erkennen ihr Update nur am alten Dateinamen
+          $version = "${{ steps.version.outputs.version }}"
           Copy-Item "dist\Music-Renamer-Setup-$version.exe" "dist\MP3-Organizer-Setup-$version.exe"
-          gh release create $env:GITHUB_REF_NAME "dist\Music-Renamer-Setup-$version.exe" "dist\Music-Renamer-Setup-$version.exe.sha256" "dist\MP3-Organizer-Setup-$version.exe" --generate-notes
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            dist/*.exe
+            dist/*.sha256
+
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            name: arm64
+          - runner: macos-15-intel
+            name: intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Abhängigkeiten
+        run: python -m pip install -r requirements.txt pyinstaller
+
+      - name: Tests
+        run: python -m unittest discover -s tests
+
+      - name: fpcalc holen
+        run: |
+          gh release download v1.5.1 --repo acoustid/chromaprint --pattern "chromaprint-fpcalc-1.5.1-macos-universal.tar.gz" --output fpcalc.tar.gz
+          mkdir -p tools fpcalc
+          tar xzf fpcalc.tar.gz -C fpcalc
+          find fpcalc -name fpcalc -type f -exec cp {} tools/ \;
+          chmod +x tools/fpcalc
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: App und Disk-Image bauen
+        run: bash installer/build_mac.sh
+
+      - name: Fertiges Paket prüfen
+        run: |
+          app="dist/Music Renamer.app/Contents/MacOS/Music Renamer"
+          "$app" --selftest
+          vtool -show-build "$app" | grep -E 'minos|version' || otool -l "$app" | grep -A3 LC_VERSION_MIN
+          "$app" & pid=$!
+          sleep 15
+          screencapture -x fenster.png || true
+          kill -0 "$pid"
+          kill "$pid"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-${{ matrix.name }}
+          path: |
+            dist/*.dmg
+            dist/*.sha256
+            fenster.png
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+
+      - name: Release veröffentlichen
+        run: |
+          rm -f assets/fenster.png
+          gh release create "$GITHUB_REF_NAME" assets/* --repo "$GITHUB_REPOSITORY" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}

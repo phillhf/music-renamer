@@ -1,8 +1,8 @@
 """Prüfansicht: Zeilen abwählen und Felder korrigieren, bevor etwas geändert wird."""
-import os
 import tkinter as tk
 from tkinter import ttk
 
+from . import system
 from .i18n import FIELD_LABELS, t
 
 MARK = {True: "☑", False: "☐"}
@@ -140,7 +140,7 @@ class ReviewWindow(tk.Toplevel):
 
     def _play(self, column):
         for row in self._chosen()[:1]:
-            os.startfile(row[column])
+            system.open_path(row[column])
 
     def swap(self):
         """Behält statt der vorgeschlagenen Datei die ausgewählte."""

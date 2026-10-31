@@ -5,7 +5,7 @@ import os
 import sys
 from collections import Counter
 
-from . import __version__, genres, updater
+from . import __version__, genres, system, updater
 from . import journal as journaling
 from . import library
 from .albums import align_albums
@@ -30,7 +30,7 @@ def app_dir(base):
 
 
 # Nicht im Programmordner: der wird bei Updates ersetzt
-APP_DIR = app_dir(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"))
+APP_DIR = app_dir(system.data_base())
 DATA_DIR = os.path.join(APP_DIR, "data")
 REPORT_DIR = os.path.join(APP_DIR, "berichte")
 DB_PATH = os.path.join(DATA_DIR, "mp3org.sqlite")

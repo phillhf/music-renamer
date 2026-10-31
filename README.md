@@ -1,12 +1,20 @@
 # Music Renamer
 
-Räumt große Musiksammlungen unter Windows auf: Dubletten aussortieren, fehlende Metadaten, Cover und Songtexte ergänzen, Dateien einheitlich benennen und sortieren.
+Räumt große Musiksammlungen unter Windows und macOS auf: Dubletten aussortieren, fehlende Metadaten, Cover und Songtexte ergänzen, Dateien einheitlich benennen und sortieren.
 
 Bis Version 0.5.0 hieß das Programm MP3 Organizer. Das Update übernimmt Einstellungen und Verlauf; eine bestehende Installation bleibt in ihrem Ordner.
 
 Unterstützt MP3, FLAC, M4A, MP4, OGG, Opus und WMA. Cover lassen sich in WMA nicht einbetten.
 
-## Installation
+## Installation auf dem Mac
+
+Von der [Release-Seite](https://github.com/phillhf/music-renamer/releases/latest) die passende Datei laden: `…-macOS-arm64.dmg` für Macs mit Apple-Chip (M1 und neuer), `…-macOS-intel.dmg` für ältere Macs. Das Image öffnen und Music Renamer in den Programme-Ordner ziehen.
+
+Die App ist nicht von Apple beglaubigt, deshalb blockiert macOS den ersten Start. Einmal starten, dann unter Systemeinstellungen → Datenschutz & Sicherheit „Trotzdem öffnen“ wählen.
+
+Neue Versionen bietet das Programm beim Start an. Auf dem Mac lädt es das Image und öffnet es, die App zieht man dann wieder in den Programme-Ordner. Einstellungen und Berichte liegen in `~/Library/Application Support/Music Renamer` und bleiben dabei erhalten. Zum Deinstallieren die App in den Papierkorb legen und bei Bedarf diesen Ordner löschen.
+
+## Installation unter Windows
 
 Den aktuellen `Music-Renamer-Setup-x.y.z.exe` von der [Release-Seite](https://github.com/phillhf/music-renamer/releases/latest) laden und starten. Adminrechte sind nicht nötig. Der Installer ist nicht signiert, deshalb warnt Windows SmartScreen beim ersten Start („Weitere Informationen“ → „Trotzdem ausführen“).
 
@@ -14,7 +22,7 @@ Der Standardordner ist `C:\Tools\Music Renamer`. Das Setup erkennt eine vorhande
 
 Beim Start prüft das Programm, ob es auf GitHub eine neue Version gibt, und bietet das Update an. Über „Nach Updates suchen“ geht das auch von Hand.
 
-## Deinstallation
+## Deinstallation unter Windows
 
 Über das Startmenü („Music Renamer deinstallieren“) oder die Windows-Einstellungen unter „Installierte Apps“. Der Uninstaller fragt, ob auch Einstellungen, Suchergebnisse, Berichte und Änderungsprotokolle entfernt werden sollen. Deine Musik und der Dubletten-Ordner bleiben in jedem Fall unberührt.
 
@@ -56,7 +64,7 @@ Die Auswahl „Genauigkeit Klangerkennung“ legt fest, wie sicher ein Treffer m
 
 ## Daten
 
-Datenbank, Protokolle und Berichte liegen in `%LOCALAPPDATA%\Music Renamer`.
+Datenbank, Protokolle und Berichte liegen unter Windows in `%LOCALAPPDATA%\Music Renamer`, auf dem Mac in `~/Library/Application Support/Music Renamer`.
 
 ## Entwicklung
 
@@ -79,6 +87,8 @@ Programm und Installer lokal bauen (braucht PyInstaller und Inno Setup 6):
 ```bash
 powershell -ExecutionPolicy Bypass -File installer\build.ps1
 ```
+
+Auf einem Mac baut `bash installer/build_mac.sh` App und Disk-Image für den eigenen Prozessor.
 
 Für ein Release `__version__` in `musicrenamer/__init__.py` erhöhen, committen und einen passenden Tag pushen, zum Beispiel `v0.2.0`. GitHub Actions baut daraus den Installer und veröffentlicht ihn.
 

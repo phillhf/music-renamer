@@ -108,6 +108,7 @@ EN = {
     "Verlauf": "History",
     "Version {version} ist aktuell.": "Version {version} is up to date.",
     "Version {new} ist verfügbar (installiert: {old}).\nJetzt herunterladen und installieren?": "Version {new} is available (installed: {old}).\nDownload and install now?",
+    "Version {new} ist verfügbar (installiert: {old}).\nJetzt herunterladen?\n\nDas Programm schließt sich. Ziehe die neue Version danach in den Programme-Ordner.": "Version {new} is available (installed: {old}).\nDownload now?\n\nThe program will close. Then drag the new version into your Applications folder.",
     "Verschieben": "Move",
     "Vorhandene Tags ersetzen statt nur leere Felder füllen": "Replace existing tags instead of only filling empty fields",
     "Vorschau": "Preview",

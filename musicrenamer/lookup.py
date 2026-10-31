@@ -7,7 +7,6 @@ import json
 import os
 import re
 import shutil
-import ssl
 import subprocess
 import sys
 import time
@@ -19,6 +18,7 @@ from difflib import SequenceMatcher
 from . import __version__
 from .library import audio_key
 from .names import normalize
+from .system import SSL_CONTEXT
 
 USER_AGENT = f"MusicRenamer/{__version__} (https://github.com/phillhf/music-renamer)"
 MB_URL = "https://musicbrainz.org/ws/2"
@@ -44,10 +44,6 @@ def parse_accuracy(value):
 
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# Python 3.14 lehnt die Zertifikatskette von archive.org (dort liegen die Cover) wegen dieser
-# Zusatzregel ab. Zertifikat und Hostname werden weiterhin geprüft.
-SSL_CONTEXT = ssl.create_default_context()
-SSL_CONTEXT.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
 _last_call = {}
 
@@ -242,7 +238,7 @@ def find_fpcalc():
     # sys._MEIPASS ist der Programmordner der installierten Version
     folders = (getattr(sys, "_MEIPASS", ""), os.path.join(PROJECT_DIR, "tools"))
     for folder in folders:
-        bundled = os.path.join(folder, "fpcalc.exe")
+        bundled = os.path.join(folder, "fpcalc.exe" if os.name == "nt" else "fpcalc")
         if folder and os.path.exists(bundled):
             return bundled
     return shutil.which("fpcalc")
