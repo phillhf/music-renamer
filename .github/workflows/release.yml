@@ -113,6 +113,10 @@ jobs:
           screencapture -x dist/fenster.png || true
           kill -0 "$pid"
           kill "$pid"
+          hdiutil attach dist/*.dmg -nobrowse -mountpoint /tmp/image
+          "/tmp/image/Music Renamer.app/Contents/MacOS/Music Renamer" --selftest
+          test -L /tmp/image/Applications
+          hdiutil detach /tmp/image
 
       - uses: actions/upload-artifact@v4
         if: always()
