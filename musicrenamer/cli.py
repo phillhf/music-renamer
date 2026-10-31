@@ -281,7 +281,7 @@ def target_name(track, pattern):
 
 def remove_empty_folders(folder, root):
     """Entfernt Ordner, die das Umsortieren geleert hat, aber nie die Sammlung selbst."""
-    while os.path.normcase(folder) != os.path.normcase(root) and folder.startswith(root):
+    while system.fold(folder) != system.fold(root) and folder.startswith(root):
         try:
             os.rmdir(folder)
         except OSError:
@@ -293,7 +293,7 @@ def cmd_rename(args):
     check_pattern(args.muster)
     root, db, tracks = prepare(args)
     rows, skipped = [], 0
-    taken = {os.path.normcase(t_.path) for t_ in tracks}
+    taken = {system.fold(t_.path) for t_ in tracks}
     # Ein Muster mit Ordnern sortiert die ganze Sammlung, sonst bleibt jede Datei in ihrem Ordner
     sorts = "/" in args.muster
     for track in tracks:
@@ -304,12 +304,12 @@ def cmd_rename(args):
         target = os.path.join(root if sorts else os.path.dirname(track.path), name)
         if target == track.path:
             continue
-        taken.discard(os.path.normcase(track.path))
+        taken.discard(system.fold(track.path))
         base, ext = os.path.splitext(target)
         candidate, n = target, 2
-        while os.path.normcase(candidate) in taken:
+        while system.fold(candidate) in taken:
             candidate, n = f"{base} ({n}){ext}", n + 1
-        taken.add(os.path.normcase(candidate))
+        taken.add(system.fold(candidate))
         rows.append({"Alt": track.path, "Neu": candidate})
     report = write_report("umbenennen-vorschau.csv", ("Alt", "Neu"), [(r["Alt"], r["Neu"]) for r in rows])
     print(t("Umbenennen: {planned} Dateien, {skipped} ohne Interpret oder Titel übersprungen.",
@@ -328,8 +328,7 @@ def cmd_rename(args):
         for number, row in enumerate(rows, 1):
             job.step(number, len(rows), t("Dateien umbenennen"))
             source, target = row["Alt"], row["Neu"]
-            same_file = os.path.normcase(source) == os.path.normcase(target)
-            if os.path.exists(target) and not same_file:
+            if os.path.exists(target) and not os.path.samefile(source, target):
                 print(t("Übersprungen, Ziel existiert: {path}", path=target))
                 continue
             try:

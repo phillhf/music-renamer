@@ -67,7 +67,7 @@ def undo_run(path):
         try:
             if entry["action"] == "move":
                 if os.path.exists(entry["source"]):
-                    same = os.path.normcase(entry["source"]) == os.path.normcase(entry["target"])
+                    same = os.path.exists(entry["target"]) and os.path.samefile(entry["source"], entry["target"])
                     if not same:
                         raise FileExistsError(f"Ziel belegt: {entry['source']}")
                 if os.path.exists(entry["target"]):

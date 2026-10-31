@@ -3,6 +3,7 @@ import os
 import ssl
 import subprocess
 import sys
+import unicodedata
 
 MACOS = sys.platform == "darwin"
 if MACOS:
@@ -13,6 +14,13 @@ def data_base():
     if MACOS:
         return os.path.expanduser("~/Library/Application Support")
     return os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+
+
+def fold(path):
+    """Form, in der das Dateisystem zwei Schreibweisen als denselben Pfad behandelt."""
+    if MACOS:
+        return unicodedata.normalize("NFC", path).casefold()
+    return os.path.normcase(path)
 
 
 def open_path(path):

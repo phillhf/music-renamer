@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from mutagen.flac import FLAC
 from mutagen.mp3 import MP3
 
+from . import system
 from .i18n import t
 from .job import job
 from .tags import EXTENSIONS, open_audio, read_tags
@@ -72,10 +73,10 @@ def connect(db_path):
 
 
 def find_audio(root, exclude=None):
-    exclude = os.path.normcase(os.path.abspath(exclude)) if exclude else None
+    exclude = system.fold(os.path.abspath(exclude)) if exclude else None
     for folder, subdirs, names in os.walk(root):
         if exclude:
-            subdirs[:] = [d for d in subdirs if os.path.normcase(
+            subdirs[:] = [d for d in subdirs if system.fold(
                 os.path.abspath(os.path.join(folder, d))) != exclude]
         for name in names:
             if name.lower().endswith(EXTENSIONS):

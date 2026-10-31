@@ -131,6 +131,7 @@ class Duplicates(Base):
         cli.cmd_dupes(Namespace(ziel=None, aehnlich=True, **arguments))
         self.assertEqual(os.listdir(self.path("Dubletten")), ["b.mp3"])
 
+    @unittest.skipUnless(os.name == "nt", "Laufwerke gibt es nur unter Windows")
     def test_collection_at_drive_root_gets_valid_folder(self):
         self.assertEqual(cli.dupes_dir(Namespace(ordner="C:\\", ziel=None)), "C:\\Dubletten")
 
@@ -179,6 +180,10 @@ class Renaming(Base):
         self.assertEqual(names, ["ACDC - T.N.T (2).mp3", "ACDC - T.N.T.mp3", "kein tag.mp3"])
         cli.cmd_undo(None)
         self.assertEqual(sorted(os.listdir(self.root)), ["kein tag.mp3", "x.mp3", "y.mp3"])
+
+    def test_mac_treats_spellings_of_a_name_as_the_same_path(self):
+        with mock.patch.object(cli.system, "MACOS", True):
+            self.assertEqual(cli.system.fold("Müller.MP3"), cli.system.fold("müller.mp3"))
 
     def test_case_only_rename(self):
         make_mp3(self.path("queen - song.mp3"), 1, tags={"artist": "Queen", "title": "Song"})
