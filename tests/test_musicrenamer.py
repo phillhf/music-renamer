@@ -12,10 +12,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mutagen.id3 import ID3
 
-from mp3org import cli, journal, library, lookup, updater
-from mp3org.dupes import find_duplicates
-from mp3org.names import parse_filename
-from mp3org.tags import write_tags
+from musicrenamer import cli, journal, library, lookup, updater
+from musicrenamer.dupes import find_duplicates
+from musicrenamer.names import parse_filename
+from musicrenamer.tags import write_tags
 
 HEADERS = {128: b"\xff\xfb\x90\x64", 320: b"\xff\xfb\xe0\x64"}
 FRAME_SIZES = {128: 417, 320: 1044}
@@ -294,8 +294,34 @@ class Lookup(unittest.TestCase):
         self.assertEqual(best[1]["releases"][0]["title"], "Opera")
 
 
+class DataFolder(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.base = tmp.name
+        self.old = os.path.join(self.base, "MP3 Organizer")
+        self.new = os.path.join(self.base, "Music Renamer")
+
+    def test_moves_old_folder(self):
+        os.makedirs(os.path.join(self.old, "data"))
+        self.assertEqual(cli.app_dir(self.base), self.new)
+        self.assertTrue(os.path.isdir(os.path.join(self.new, "data")))
+        self.assertFalse(os.path.exists(self.old))
+
+    def test_existing_new_folder_wins(self):
+        os.makedirs(self.old)
+        os.makedirs(self.new)
+        self.assertEqual(cli.app_dir(self.base), self.new)
+        self.assertTrue(os.path.exists(self.old))
+
+    def test_stays_in_old_folder_when_locked(self):
+        os.makedirs(self.old)
+        with mock.patch("os.rename", side_effect=PermissionError):
+            self.assertEqual(cli.app_dir(self.base), self.old)
+
+
 class Updates(unittest.TestCase):
-    def release(self, tag, name="MP3-Organizer-Setup-1.2.0.exe"):
+    def release(self, tag, name="Music-Renamer-Setup-1.2.0.exe"):
         return {"tag_name": tag, "html_url": "u", "assets": [
             {"name": "quelle.zip", "browser_download_url": "z"},
             {"name": name, "browser_download_url": "x", "digest": "sha256:ab"}]}
@@ -322,7 +348,7 @@ class Updates(unittest.TestCase):
         self.assertIn("/RESTARTAPP=1", arguments)
 
     def test_wrong_checksum_is_rejected(self):
-        release = updater.Release("1.2.0", "u", "x", "MP3-Organizer-Setup-1.2.0.exe", "sha256:falsch")
+        release = updater.Release("1.2.0", "u", "x", "Music-Renamer-Setup-1.2.0.exe", "sha256:falsch")
         with mock.patch.object(urllib.request, "urlopen", return_value=io.BytesIO(b"daten")) as fake:
             fake.return_value.headers = {}
             with self.assertRaises(ValueError):

@@ -1,5 +1,5 @@
-# Baut dist\MP3Organizer (PyInstaller) und dist\MP3-Organizer-Setup-<Version>.exe (Inno Setup 6).
-# Die Version kommt ausschliesslich aus mp3org\__init__.py (__version__ = "x.y.z").
+# Baut dist\MusicRenamer (PyInstaller) und dist\Music-Renamer-Setup-<Version>.exe (Inno Setup 6).
+# Die Version kommt ausschliesslich aus musicrenamer\__init__.py (__version__ = "x.y.z").
 # Aufruf aus dem Projektordner:  powershell -ExecutionPolicy Bypass -File installer\build.ps1 [-SkipTests]
 
 param([switch]$SkipTests)
@@ -8,11 +8,11 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-$src = Get-Content "mp3org\__init__.py" -Raw
-if ($src -notmatch '__version__\s*=\s*"(\d+)\.(\d+)\.(\d+)"') { throw "__version__ in mp3org\__init__.py nicht gefunden" }
+$src = Get-Content "musicrenamer\__init__.py" -Raw
+if ($src -notmatch '__version__\s*=\s*"(\d+)\.(\d+)\.(\d+)"') { throw "__version__ in musicrenamer\__init__.py nicht gefunden" }
 $version = "$($Matches[1]).$($Matches[2]).$($Matches[3])"
 $tuple = "($($Matches[1]), $($Matches[2]), $($Matches[3]), 0)"
-Write-Host "Baue MP3 Organizer $version"
+Write-Host "Baue Music Renamer $version"
 
 $python = if (Test-Path ".venv\Scripts\python.exe") { ".venv\Scripts\python.exe" } else { "python" }
 
@@ -29,12 +29,12 @@ VSVersionInfo(
   kids=[
     StringFileInfo([StringTable('040704B0', [
       StringStruct('CompanyName', 'phillhf'),
-      StringStruct('FileDescription', 'MP3 Organizer - MP3-Sammlung aufraeumen'),
+      StringStruct('FileDescription', 'Music Renamer - Musiksammlung aufraeumen'),
       StringStruct('FileVersion', '$version'),
-      StringStruct('InternalName', 'MP3Organizer'),
+      StringStruct('InternalName', 'MusicRenamer'),
       StringStruct('LegalCopyright', 'GPL-3.0 - phillhf'),
-      StringStruct('OriginalFilename', 'MP3Organizer.exe'),
-      StringStruct('ProductName', 'MP3 Organizer'),
+      StringStruct('OriginalFilename', 'MusicRenamer.exe'),
+      StringStruct('ProductName', 'Music Renamer'),
       StringStruct('ProductVersion', '$version')])]),
     VarFileInfo([VarStruct('Translation', [1031, 1200])])
   ]
@@ -46,7 +46,7 @@ $extra = @()
 if (Test-Path "tools\fpcalc.exe") { $extra = @("--add-binary", "$root\tools\fpcalc.exe;.") }
 else { Write-Warning "tools\fpcalc.exe fehlt, Build ohne Klangerkennung" }
 
-& $python -m PyInstaller --noconfirm --windowed --name MP3Organizer `
+& $python -m PyInstaller --noconfirm --windowed --name MusicRenamer `
     --icon "$root\installer\app.ico" --add-data "$root\installer\app.ico;." --version-file "$root\build\version_info.txt" `
     @extra --distpath dist --workpath build\pyinstaller --specpath build app.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller fehlgeschlagen" }
@@ -58,10 +58,10 @@ $iscc = @(
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $iscc) { throw "Inno Setup 6 nicht gefunden (winget install JRSoftware.InnoSetup)" }
 
-& $iscc /Q "/DAppVersion=$version" installer\MP3Organizer.iss
+& $iscc /Q "/DAppVersion=$version" installer\MusicRenamer.iss
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup fehlgeschlagen" }
 
-$setup = Get-Item "dist\MP3-Organizer-Setup-$version.exe"
+$setup = Get-Item "dist\Music-Renamer-Setup-$version.exe"
 $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
 "$hash  $($setup.Name)" | Set-Content "$($setup.FullName).sha256" -NoNewline -Encoding ascii
 Write-Host ("{0,-36} {1,6:N1} MB" -f $setup.Name, ($setup.Length / 1MB))

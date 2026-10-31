@@ -1,3 +1,3 @@
-from mp3org.gui import main
+from musicrenamer.gui import main
 
 main()

@@ -10,10 +10,10 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from test_mp3org import Base, make_mp3
+from test_musicrenamer import Base, make_mp3
 
-from mp3org import albums, cli, genres, i18n, journal, library, lookup
-from mp3org.job import Cancelled, Job, job
+from musicrenamer import albums, cli, genres, i18n, journal, library, lookup
+from musicrenamer.job import Cancelled, Job, job
 
 
 class Cancelling(Base):
@@ -213,7 +213,7 @@ class AudioKey(Base):
     def test_survives_rename_and_tagging(self):
         make_mp3(self.path("a.mp3"), 1)
         before = library.audio_key(self.path("a.mp3"))
-        from mp3org.tags import write_tags
+        from musicrenamer.tags import write_tags
         write_tags(self.path("a.mp3"), {"artist": "Neu"})
         os.rename(self.path("a.mp3"), self.path("b.mp3"))
         self.assertEqual(library.audio_key(self.path("b.mp3")), before)
@@ -271,7 +271,7 @@ class Translation(unittest.TestCase):
         self.addCleanup(setattr, i18n, "language", "de")
 
     def test_every_text_has_a_translation(self):
-        folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mp3org")
+        folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "musicrenamer")
         call = re.compile(r"""\bt\(\s*(['"])(.+?)(?<!\\)\1""", re.S)
         missing = set()
         for path in glob.glob(os.path.join(folder, "*.py")):

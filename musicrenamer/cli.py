@@ -17,8 +17,20 @@ from .names import clean, identify, safe_filename
 from .tags import FIELDS as TAG_FIELDS
 from .tags import write_tags
 
+
+def app_dir(base):
+    """Datenordner; bis 0.5.0 hieß er nach dem alten Programmnamen und zieht einmalig um."""
+    new, old = os.path.join(base, "Music Renamer"), os.path.join(base, "MP3 Organizer")
+    if os.path.isdir(old) and not os.path.exists(new):
+        try:
+            os.rename(old, new)
+        except OSError:  # Zum Beispiel noch geöffnet: dann bleiben die Daten vorerst dort
+            return old
+    return new
+
+
 # Nicht im Programmordner: der wird bei Updates ersetzt
-APP_DIR = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "MP3 Organizer")
+APP_DIR = app_dir(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"))
 DATA_DIR = os.path.join(APP_DIR, "data")
 REPORT_DIR = os.path.join(APP_DIR, "berichte")
 DB_PATH = os.path.join(DATA_DIR, "mp3org.sqlite")
@@ -351,7 +363,7 @@ def cmd_update(args):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    parser = argparse.ArgumentParser(prog="mp3org", description="Musiksammlung aufräumen")
+    parser = argparse.ArgumentParser(prog="musicrenamer", description="Musiksammlung aufräumen")
     commands = parser.add_subparsers(dest="command", required=True)
 
     def command(name, handler, help_text):

@@ -12,7 +12,7 @@ import wave
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mp3org import fingerprint, library, lookup, tags
+from musicrenamer import fingerprint, library, lookup, tags
 
 FFMPEG = shutil.which("ffmpeg")
 FPCALC = lookup.find_fpcalc()

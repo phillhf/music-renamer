@@ -11,9 +11,9 @@ from dataclasses import dataclass
 
 from . import __version__
 
-REPO = "phillhf/mp3-organizer"
+REPO = "phillhf/music-renamer"
 API_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
-ASSET_PATTERN = re.compile(r"^MP3-Organizer-Setup-[\d.]+\.exe$")
+ASSET_PATTERN = re.compile(r"^Music-Renamer-Setup-[\d.]+\.exe$")
 
 
 @dataclass
@@ -32,7 +32,7 @@ def parse_version(text):
 
 def _request(url):
     return urllib.request.Request(url, headers={
-        "User-Agent": f"MP3Organizer/{__version__}", "Accept": "application/vnd.github+json"})
+        "User-Agent": f"MusicRenamer/{__version__}", "Accept": "application/vnd.github+json"})
 
 
 def parse_release(data, current=__version__):
@@ -53,7 +53,7 @@ def check_latest(current=__version__):
 
 
 def download(release, progress=lambda percent: None):
-    target = os.path.join(tempfile.mkdtemp(prefix="mp3org-update-"), release.asset_name)
+    target = os.path.join(tempfile.mkdtemp(prefix="musicrenamer-update-"), release.asset_name)
     digest = hashlib.sha256()
     with urllib.request.urlopen(_request(release.asset_url), timeout=60) as response, \
             open(target, "wb") as f:

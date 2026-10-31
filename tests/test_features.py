@@ -10,10 +10,10 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from test_mp3org import Base, make_mp3
+from test_musicrenamer import Base, make_mp3
 
-from mp3org import albums, cli, fingerprint, library, lookup, tags
-from mp3org.dupes import find_duplicates
+from musicrenamer import albums, cli, fingerprint, library, lookup, tags
+from musicrenamer.dupes import find_duplicates
 
 JPEG = b"\xff\xd8\xff\xe0" + b"bild" * 50
 PNG = b"\x89PNG\r\n\x1a\n" + b"bild" * 50

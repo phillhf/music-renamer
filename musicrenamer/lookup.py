@@ -20,7 +20,7 @@ from . import __version__
 from .library import audio_key
 from .names import normalize
 
-USER_AGENT = f"MP3Organizer/{__version__} (https://github.com/phillhf/mp3-organizer)"
+USER_AGENT = f"MusicRenamer/{__version__} (https://github.com/phillhf/music-renamer)"
 MB_URL = "https://musicbrainz.org/ws/2"
 MIN_SIMILARITY = 0.85
 MAX_DURATION_DIFF = 8.0

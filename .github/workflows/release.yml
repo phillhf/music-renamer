@@ -1,7 +1,7 @@
 name: Release
 
 # Startet mit einem Versions-Tag: git tag v0.2.0 && git push origin v0.2.0
-# Der Tag muss zu __version__ in mp3org/__init__.py passen.
+# Der Tag muss zu __version__ in musicrenamer/__init__.py passen.
 on:
   push:
     tags: ["v*"]
@@ -29,7 +29,7 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $version = python -c "import mp3org; print(mp3org.__version__)"
+          $version = python -c "import musicrenamer; print(musicrenamer.__version__)"
           if ("v$version" -ne $env:GITHUB_REF_NAME) { throw "Tag $env:GITHUB_REF_NAME passt nicht zu Version $version" }
           "version=$version" >> $env:GITHUB_OUTPUT
 
@@ -53,6 +53,10 @@ jobs:
 
       - name: Release veröffentlichen
         shell: pwsh
-        run: gh release create $env:GITHUB_REF_NAME "dist\MP3-Organizer-Setup-${{ steps.version.outputs.version }}.exe" "dist\MP3-Organizer-Setup-${{ steps.version.outputs.version }}.exe.sha256" --generate-notes
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          # Versionen bis 0.5.0 erkennen ihr Update nur am alten Dateinamen
+          Copy-Item "dist\Music-Renamer-Setup-$version.exe" "dist\MP3-Organizer-Setup-$version.exe"
+          gh release create $env:GITHUB_REF_NAME "dist\Music-Renamer-Setup-$version.exe" "dist\Music-Renamer-Setup-$version.exe.sha256" "dist\MP3-Organizer-Setup-$version.exe" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}

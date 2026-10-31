@@ -1,20 +1,22 @@
-# MP3 Organizer
+# Music Renamer
 
 Räumt große Musiksammlungen unter Windows auf: Dubletten aussortieren, fehlende Metadaten, Cover und Songtexte ergänzen, Dateien einheitlich benennen und sortieren.
+
+Bis Version 0.5.0 hieß das Programm MP3 Organizer. Das Update übernimmt Einstellungen und Verlauf; eine bestehende Installation bleibt in ihrem Ordner.
 
 Unterstützt MP3, FLAC, M4A, MP4, OGG, Opus und WMA. Cover lassen sich in WMA nicht einbetten.
 
 ## Installation
 
-Den aktuellen `MP3-Organizer-Setup-x.y.z.exe` von der [Release-Seite](https://github.com/phillhf/mp3-organizer/releases/latest) laden und starten. Adminrechte sind nicht nötig. Der Installer ist nicht signiert, deshalb warnt Windows SmartScreen beim ersten Start („Weitere Informationen“ → „Trotzdem ausführen“).
+Den aktuellen `Music-Renamer-Setup-x.y.z.exe` von der [Release-Seite](https://github.com/phillhf/music-renamer/releases/latest) laden und starten. Adminrechte sind nicht nötig. Der Installer ist nicht signiert, deshalb warnt Windows SmartScreen beim ersten Start („Weitere Informationen“ → „Trotzdem ausführen“).
 
-Der Standardordner ist `C:\Tools\MP3 Organizer`. Das Setup erkennt eine vorhandene Installation und aktualisiert sie, Einstellungen und Berichte bleiben dabei erhalten.
+Der Standardordner ist `C:\Tools\Music Renamer`. Das Setup erkennt eine vorhandene Installation und aktualisiert sie, Einstellungen und Berichte bleiben dabei erhalten.
 
 Beim Start prüft das Programm, ob es auf GitHub eine neue Version gibt, und bietet das Update an. Über „Nach Updates suchen“ geht das auch von Hand.
 
 ## Deinstallation
 
-Über das Startmenü („MP3 Organizer deinstallieren“) oder die Windows-Einstellungen unter „Installierte Apps“. Der Uninstaller fragt, ob auch Einstellungen, Suchergebnisse, Berichte und Änderungsprotokolle entfernt werden sollen. Deine Musik und der Dubletten-Ordner bleiben in jedem Fall unberührt.
+Über das Startmenü („Music Renamer deinstallieren“) oder die Windows-Einstellungen unter „Installierte Apps“. Der Uninstaller fragt, ob auch Einstellungen, Suchergebnisse, Berichte und Änderungsprotokolle entfernt werden sollen. Deine Musik und der Dubletten-Ordner bleiben in jedem Fall unberührt.
 
 ## Benutzung
 
@@ -54,7 +56,7 @@ Die Auswahl „Genauigkeit Klangerkennung“ legt fest, wie sicher ein Treffer m
 
 ## Daten
 
-Datenbank, Protokolle und Berichte liegen in `%LOCALAPPDATA%\MP3 Organizer`.
+Datenbank, Protokolle und Berichte liegen in `%LOCALAPPDATA%\Music Renamer`.
 
 ## Entwicklung
 
@@ -70,7 +72,7 @@ python -m unittest discover -s tests
 python app.py
 ```
 
-Die Befehlszeile gibt es mit `python -m mp3org --help`.
+Die Befehlszeile gibt es mit `python -m musicrenamer --help`.
 
 Programm und Installer lokal bauen (braucht PyInstaller und Inno Setup 6):
 
@@ -78,7 +80,7 @@ Programm und Installer lokal bauen (braucht PyInstaller und Inno Setup 6):
 powershell -ExecutionPolicy Bypass -File installer\build.ps1
 ```
 
-Für ein Release `__version__` in `mp3org/__init__.py` erhöhen, committen und einen passenden Tag pushen, zum Beispiel `v0.2.0`. GitHub Actions baut daraus den Installer und veröffentlicht ihn.
+Für ein Release `__version__` in `musicrenamer/__init__.py` erhöhen, committen und einen passenden Tag pushen, zum Beispiel `v0.2.0`. GitHub Actions baut daraus den Installer und veröffentlicht ihn.
 
 ## Lizenz
 

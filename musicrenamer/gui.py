@@ -94,7 +94,7 @@ class App(tk.Tk):
         super().__init__()
         settings = load_settings()
         i18n.language = settings.get("sprache", "de")
-        self.title(f"MP3 Organizer {__version__}")
+        self.title(f"Music Renamer {__version__}")
         self.geometry("840x760")
         self.minsize(740, 680)
         icon = os.path.join(getattr(sys, "_MEIPASS", ""), "app.ico")
@@ -230,7 +230,7 @@ class App(tk.Tk):
 
     def _language_changed(self, event=None):
         self._save()
-        messagebox.showinfo("MP3 Organizer", t("Die Sprache gilt nach dem nächsten Start."))
+        messagebox.showinfo("Music Renamer", t("Die Sprache gilt nach dem nächsten Start."))
 
     def _print(self, text):
         self.log.configure(state="normal")
@@ -320,7 +320,7 @@ class App(tk.Tk):
     def _start(self, command, apply, **options):
         folder = self.folder.get().strip()
         if not folder:
-            messagebox.showinfo("MP3 Organizer", t("Bitte zuerst die Sammlung auswählen."))
+            messagebox.showinfo("Music Renamer", t("Bitte zuerst die Sammlung auswählen."))
             return
         settings = self._save()
         os.environ["ACOUSTID_KEY"] = settings["acoustid_key"]
@@ -335,7 +335,7 @@ class App(tk.Tk):
         try:
             parse_accuracy(accuracy)
         except ValueError:
-            messagebox.showerror("MP3 Organizer", t("Bitte als eigenen Wert eine Zahl von 1 bis 100 eintragen."))
+            messagebox.showerror("Music Renamer", t("Bitte als eigenen Wert eine Zahl von 1 bis 100 eintragen."))
             return
         self._start(cli.cmd_tag, apply, ueberschreiben=self.overwrite.get(), limit=None, genauigkeit=accuracy,
                     cover=self.cover.get(), songtexte=self.lyrics.get(), genres=self.unify_genres.get())
@@ -343,7 +343,7 @@ class App(tk.Tk):
     def _open_editor(self):
         folder = self.folder.get().strip()
         if not folder:
-            messagebox.showinfo("MP3 Organizer", t("Bitte zuerst die Sammlung auswählen."))
+            messagebox.showinfo("Music Renamer", t("Bitte zuerst die Sammlung auswählen."))
             return
         self._run_background(self._load_editor, folder)
 

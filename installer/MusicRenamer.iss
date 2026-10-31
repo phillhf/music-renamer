@@ -1,10 +1,10 @@
-﻿; MP3 Organizer – grafisches Setup und Deinstallation (Inno Setup 6)
-; Bauen: installer\build.ps1   (baut erst dist\MP3Organizer mit PyInstaller, dann dieses Setup)
-;   oder direkt: ISCC.exe /DAppVersion=x.y.z installer\MP3Organizer.iss
+﻿; Music Renamer – grafisches Setup und Deinstallation (Inno Setup 6)
+; Bauen: installer\build.ps1   (baut erst dist\MusicRenamer mit PyInstaller, dann dieses Setup)
+;   oder direkt: ISCC.exe /DAppVersion=x.y.z installer\MusicRenamer.iss
 ;
-; Ohne Administratorrechte. Datenbank, Protokolle und Berichte liegen unter %LOCALAPPDATA%\MP3 Organizer.
-; Stilles Setup:  MP3-Organizer-Setup-x.y.z.exe /VERYSILENT [/DIR="D:\MP3 Organizer"] [/TASKS="desktopicon"]
-;   [/RESTARTAPP=1 (MP3 Organizer nach dem Update wieder starten - so ruft es die Update-Funktion auf)]
+; Ohne Administratorrechte. Datenbank, Protokolle und Berichte liegen unter %LOCALAPPDATA%\Music Renamer.
+; Stilles Setup:  Music-Renamer-Setup-x.y.z.exe /VERYSILENT [/DIR="D:\Music Renamer"] [/TASKS="desktopicon"]
+;   [/RESTARTAPP=1 (Music Renamer nach dem Update wieder starten - so ruft es die Update-Funktion auf)]
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -15,16 +15,16 @@
 
 [Setup]
 AppId={{7C1E2F64-6B0A-4D38-9E52-3F0B7D41A9C6}
-AppName=MP3 Organizer
+AppName=Music Renamer
 AppVersion={#AppVersion}
-AppVerName=MP3 Organizer {#AppVersion}
+AppVerName=Music Renamer {#AppVersion}
 AppPublisher=phillhf
-AppPublisherURL=https://github.com/phillhf/mp3-organizer
-AppSupportURL=https://github.com/phillhf/mp3-organizer/issues
-AppUpdatesURL=https://github.com/phillhf/mp3-organizer/releases
+AppPublisherURL=https://github.com/phillhf/music-renamer
+AppSupportURL=https://github.com/phillhf/music-renamer/issues
+AppUpdatesURL=https://github.com/phillhf/music-renamer/releases
 VersionInfoVersion={#AppVersion}
-VersionInfoDescription=MP3 Organizer Setup
-DefaultDirName=C:\Tools\MP3 Organizer
+VersionInfoDescription=Music Renamer Setup
+DefaultDirName=C:\Tools\Music Renamer
 AppendDefaultDirName=no
 DirExistsWarning=no
 UsePreviousAppDir=yes
@@ -35,12 +35,12 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#DistDir}
-OutputBaseFilename=MP3-Organizer-Setup-{#AppVersion}
+OutputBaseFilename=Music-Renamer-Setup-{#AppVersion}
 SetupIconFile=app.ico
 WizardStyle=modern
 LicenseFile=..\LICENSE
-UninstallDisplayName=MP3 Organizer
-UninstallDisplayIcon={app}\MP3Organizer.exe
+UninstallDisplayName=Music Renamer
+UninstallDisplayIcon={app}\MusicRenamer.exe
 Compression=lzma2/max
 SolidCompression=yes
 CloseApplications=yes
@@ -52,34 +52,34 @@ Name: "de"; MessagesFile: "compiler:Languages\German.isl"
 Name: "en"; MessagesFile: "compiler:Default.isl"
 
 [Messages]
-de.WelcomeLabel1=Willkommen bei MP3 Organizer
-en.WelcomeLabel1=Welcome to MP3 Organizer
+de.WelcomeLabel1=Willkommen bei Music Renamer
+en.WelcomeLabel1=Welcome to Music Renamer
 
 [CustomMessages]
-de.Welcome=Dieses Setup installiert MP3 Organizer {#AppVersion}.%n%nMP3 Organizer räumt Musiksammlungen auf: Dubletten aussortieren, fehlende Metadaten, Cover und Songtexte ergänzen und Dateien einheitlich benennen und sortieren.%n%nEs werden keine Administratorrechte benötigt.
-en.Welcome=This setup installs MP3 Organizer {#AppVersion}.%n%nMP3 Organizer tidies up music collections: it sorts out duplicates, fills in missing metadata, covers and lyrics, and gives files consistent names and folders.%n%nNo administrator rights are required.
-de.WelcomeUpdate=MP3 Organizer %1 ist bereits installiert in%n%2%n%nDas Setup aktualisiert auf Version {#AppVersion}. Einstellungen, Suchergebnisse und Berichte bleiben erhalten.
-en.WelcomeUpdate=MP3 Organizer %1 is already installed in%n%2%n%nThis setup updates it to version {#AppVersion}. Settings, lookup results and reports are kept.
+de.Welcome=Dieses Setup installiert Music Renamer {#AppVersion}.%n%nMusic Renamer räumt Musiksammlungen auf: Dubletten aussortieren, fehlende Metadaten, Cover und Songtexte ergänzen und Dateien einheitlich benennen und sortieren.%n%nEs werden keine Administratorrechte benötigt.
+en.Welcome=This setup installs Music Renamer {#AppVersion}.%n%nMusic Renamer tidies up music collections: it sorts out duplicates, fills in missing metadata, covers and lyrics, and gives files consistent names and folders.%n%nNo administrator rights are required.
+de.WelcomeUpdate=Music Renamer %1 ist bereits installiert in%n%2%n%nDas Setup aktualisiert auf Version {#AppVersion}. Einstellungen, Suchergebnisse und Berichte bleiben erhalten.
+en.WelcomeUpdate=Music Renamer %1 is already installed in%n%2%n%nThis setup updates it to version {#AppVersion}. Settings, lookup results and reports are kept.
 de.NewerInstalled=Installiert ist bereits die neuere Version %1.%n%nTrotzdem die ältere Version {#AppVersion} einspielen?
 en.NewerInstalled=The newer version %1 is already installed.%n%nInstall the older version {#AppVersion} anyway?
-de.BadDir=Bitte einen Unterordner auf einer lokalen Festplatte wählen, z. B. C:\Tools\MP3 Organizer.
-en.BadDir=Please choose a subfolder on a local drive, e.g. C:\Tools\MP3 Organizer.
+de.BadDir=Bitte einen Unterordner auf einer lokalen Festplatte wählen, z. B. C:\Tools\Music Renamer.
+en.BadDir=Please choose a subfolder on a local drive, e.g. C:\Tools\Music Renamer.
 de.DesktopIcon=Verknüpfung auf dem Desktop anlegen
 en.DesktopIcon=Create a desktop shortcut
 de.Shortcuts=Zusätzliche Verknüpfungen:
 en.Shortcuts=Additional shortcuts:
-de.Uninstall=MP3 Organizer deinstallieren
-en.Uninstall=Uninstall MP3 Organizer
-de.LaunchNow=MP3 Organizer jetzt starten
-en.LaunchNow=Start MP3 Organizer now
-de.Finished=MP3 Organizer {#AppVersion} ist installiert.%n%nSo geht's los:%n  • Sammlung auswählen%n  • jeden Schritt zuerst mit „Vorschau“ prüfen%n  • dann mit „Ausführen“ anwenden%n%nGelöscht wird dabei nichts, und der letzte Schritt lässt sich zurücknehmen. Updates bietet MP3 Organizer beim Start automatisch an.
-en.Finished=MP3 Organizer {#AppVersion} is installed.%n%nGetting started:%n  • choose your collection%n  • check each step with “Vorschau” (preview) first%n  • then apply it with “Ausführen” (run)%n%nNothing gets deleted, and the last step can be undone. MP3 Organizer offers updates automatically when it starts.
+de.Uninstall=Music Renamer deinstallieren
+en.Uninstall=Uninstall Music Renamer
+de.LaunchNow=Music Renamer jetzt starten
+en.LaunchNow=Start Music Renamer now
+de.Finished=Music Renamer {#AppVersion} ist installiert.%n%nSo geht's los:%n  • Sammlung auswählen%n  • jeden Schritt zuerst mit „Vorschau“ prüfen%n  • dann mit „Prüfen und ausführen“ anwenden%n%nGelöscht wird dabei nichts, und im Verlauf lassen sich Schritte zurücknehmen. Updates bietet Music Renamer beim Start automatisch an.
+en.Finished=Music Renamer {#AppVersion} is installed.%n%nGetting started:%n  • choose your collection%n  • check each step with “Vorschau” (preview) first%n  • then apply it with “Prüfen und ausführen” (review and run)%n%nNothing gets deleted, and steps can be undone in the history. Music Renamer offers updates automatically when it starts.
 de.Operation=Vorgang:
 en.Operation=Operation:
 de.OpUpdate=Update von %1 auf {#AppVersion} (Einstellungen und Berichte bleiben erhalten)
 en.OpUpdate=Update from %1 to {#AppVersion} (settings and reports are kept)
-de.OpInstall=Neuinstallation von MP3 Organizer {#AppVersion}
-en.OpInstall=New installation of MP3 Organizer {#AppVersion}
+de.OpInstall=Neuinstallation von Music Renamer {#AppVersion}
+en.OpInstall=New installation of Music Renamer {#AppVersion}
 de.DeleteData=Sollen auch Einstellungen, gespeicherte Suchergebnisse, Berichte und Änderungsprotokolle gelöscht werden?%n%nOrdner: %1%n%nBei „Nein“ bleiben sie erhalten und werden bei einer Neuinstallation wieder verwendet. Ohne die Protokolle lassen sich bisherige Schritte nicht mehr rückgängig machen.%n%nDeine Musik und der Dubletten-Ordner werden in keinem Fall angefasst.
 en.DeleteData=Should settings, saved lookup results, reports and change logs be deleted as well?%n%nFolder: %1%n%nIf you choose “No” they are kept and reused by a later reinstallation. Without the logs, earlier steps can no longer be undone.%n%nYour music and the duplicates folder are never touched.
 
@@ -89,21 +89,25 @@ Name: "desktopicon"; Description: "{cm:DesktopIcon}"; GroupDescription: "{cm:Sho
 [InstallDelete]
 ; Ein Update ersetzt die komplette Python-Laufzeit – alte Dateien nicht liegen lassen
 Type: filesandordirs; Name: "{app}\_internal"
+; Bis 0.5.0 hiess das Programm MP3 Organizer
+Type: files; Name: "{app}\MP3Organizer.exe"
+Type: filesandordirs; Name: "{autoprograms}\MP3 Organizer"
+Type: files; Name: "{autodesktop}\MP3 Organizer.lnk"
 
 [Files]
-Source: "{#DistDir}\MP3Organizer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#DistDir}\MusicRenamer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\MP3 Organizer\MP3 Organizer"; Filename: "{app}\MP3Organizer.exe"; WorkingDir: "{app}"
-Name: "{autoprograms}\MP3 Organizer\{cm:Uninstall}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\MP3 Organizer"; Filename: "{app}\MP3Organizer.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autoprograms}\Music Renamer\Music Renamer"; Filename: "{app}\MusicRenamer.exe"; WorkingDir: "{app}"
+Name: "{autoprograms}\Music Renamer\{cm:Uninstall}"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\Music Renamer"; Filename: "{app}\MusicRenamer.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\MP3Organizer.exe"; WorkingDir: "{app}"; Description: "{cm:LaunchNow}"; Flags: postinstall nowait skipifsilent
-; Nach einem Update ueber die eingebaute Update-Funktion MP3 Organizer wieder starten
-Filename: "{app}\MP3Organizer.exe"; WorkingDir: "{app}"; Flags: nowait; Check: RestartAfterSilentUpdate
+Filename: "{app}\MusicRenamer.exe"; WorkingDir: "{app}"; Description: "{cm:LaunchNow}"; Flags: postinstall nowait skipifsilent
+; Nach einem Update ueber die eingebaute Update-Funktion Music Renamer wieder starten
+Filename: "{app}\MusicRenamer.exe"; WorkingDir: "{app}"; Flags: nowait; Check: RestartAfterSilentUpdate
 
 [UninstallDelete]
 Type: dirifempty; Name: "{app}"
@@ -195,12 +199,12 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   Code: Integer;
 begin
-  // Stilles Update aus dem Programm heraus: laufendes MP3 Organizer beenden, damit die Dateien ersetzt werden koennen.
+  // Stilles Update aus dem Programm heraus: laufendes Music Renamer beenden, damit die Dateien ersetzt werden koennen.
   // (Interaktiv fragt Inno Setup selbst nach, ob laufende Programme geschlossen werden sollen.)
   if WizardSilent() then
   begin
     Sleep(1500);
-    Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM MP3Organizer.exe', '', SW_HIDE, ewWaitUntilTerminated, Code);
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM MusicRenamer.exe /IM MP3Organizer.exe', '', SW_HIDE, ewWaitUntilTerminated, Code);
     Sleep(500);
   end;
   Result := '';
@@ -230,7 +234,7 @@ begin
   Result := True;
   DeleteData := False;
   if not UninstallSilent() then
-    DeleteData := MsgBox(FmtMessage(CustomMessage('DeleteData'), [ExpandConstant('{localappdata}\MP3 Organizer')]),
+    DeleteData := MsgBox(FmtMessage(CustomMessage('DeleteData'), [ExpandConstant('{localappdata}\Music Renamer')]),
       mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES;
 end;
 
@@ -238,5 +242,8 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep <> usPostUninstall then Exit;
   if DeleteData then
+  begin
+    DelTree(ExpandConstant('{localappdata}\Music Renamer'), True, True, True);
     DelTree(ExpandConstant('{localappdata}\MP3 Organizer'), True, True, True);
+  end;
 end;
