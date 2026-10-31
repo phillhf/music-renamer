@@ -142,6 +142,12 @@ def read_file(path):
     return values
 
 
+def read_track(path):
+    """Liest eine einzelne Datei ohne den Umweg über die Datenbank."""
+    values = read_file(path)
+    return Track(path, os.path.getsize(path), *[("" if values[c] is None else values[c]) for c in READ_COLUMNS])
+
+
 def scan(root, db, exclude=None, progress=print):
     """Bringt die Datenbank auf den Stand der Sammlung; gibt Fehlerliste zurück."""
     known = {row[0]: (row[1], row[2]) for row in

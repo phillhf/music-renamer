@@ -47,7 +47,7 @@ if (Test-Path "tools\fpcalc.exe") { $extra = @("--add-binary", "$root\tools\fpca
 else { Write-Warning "tools\fpcalc.exe fehlt, Build ohne Klangerkennung" }
 
 & $python -m PyInstaller --noconfirm --windowed --name MusicRenamer `
-    --icon "$root\installer\app.ico" --add-data "$root\installer\app.ico;." --version-file "$root\build\version_info.txt" `
+    --icon "$root\installer\app.ico" --add-data "$root\installer\app.ico;." --collect-all tkinterdnd2 --version-file "$root\build\version_info.txt" `
     @extra --distpath dist --workpath build\pyinstaller --specpath build app.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller fehlgeschlagen" }
 

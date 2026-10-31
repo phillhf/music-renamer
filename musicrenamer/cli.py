@@ -289,15 +289,12 @@ def remove_empty_folders(folder, root):
         folder = os.path.dirname(folder)
 
 
-def cmd_rename(args):
-    check_pattern(args.muster)
-    root, db, tracks = prepare(args)
+def plan_renames(tracks, pattern, root, taken):
     rows, skipped = [], 0
-    taken = {system.fold(t_.path) for t_ in tracks}
     # Ein Muster mit Ordnern sortiert die ganze Sammlung, sonst bleibt jede Datei in ihrem Ordner
-    sorts = "/" in args.muster
+    sorts = "/" in pattern
     for track in tracks:
-        name = target_name(track, args.muster)
+        name = target_name(track, pattern)
         if not name:
             skipped += 1
             continue
@@ -311,6 +308,10 @@ def cmd_rename(args):
             candidate, n = f"{base} ({n}){ext}", n + 1
         taken.add(system.fold(candidate))
         rows.append({"Alt": track.path, "Neu": candidate})
+    return rows, skipped
+
+
+def run_renames(args, rows, skipped, root):
     report = write_report("umbenennen-vorschau.csv", ("Alt", "Neu"), [(r["Alt"], r["Neu"]) for r in rows])
     print(t("Umbenennen: {planned} Dateien, {skipped} ohne Interpret oder Titel übersprungen.",
             planned=len(rows), skipped=skipped))
@@ -333,13 +334,55 @@ def cmd_rename(args):
                 continue
             try:
                 journaling.move_file(source, target, journal)
-                remove_empty_folders(os.path.dirname(source), root)
+                if root:
+                    remove_empty_folders(os.path.dirname(source), root)
                 done += 1
             except OSError as exc:
                 print(t("Fehler bei {path}: {reason}", path=source, reason=exc))
     finally:
         journal.close()
         print(t("Dateien umbenannt: {count}", count=done))
+
+
+def cmd_rename(args):
+    check_pattern(args.muster)
+    root, db, tracks = prepare(args)
+    rows, skipped = plan_renames(tracks, args.muster, root, {system.fold(t_.path) for t_ in tracks})
+    run_renames(args, rows, skipped, root)
+
+
+def collect_audio(paths):
+    """Audiodateien aus einzeln gewählten Dateien und Ordnern, jede nur einmal."""
+    found = {}
+    for path in map(os.path.abspath, paths):
+        if os.path.isdir(path):
+            found.update(dict.fromkeys(library.find_audio(path, os.path.join(path, "Dubletten"))))
+        elif path.lower().endswith(library.EXTENSIONS):
+            found[path] = None
+    return list(found)
+
+
+def cmd_rename_files(args):
+    """Benennt einzelne Dateien um; sie bleiben in ihrem Ordner, auch wenn das Muster Ordner enthält."""
+    check_pattern(args.muster)
+    paths = collect_audio(args.dateien)
+    if not paths:
+        print(t("Keine Audiodateien dabei."))
+        return
+    tracks = []
+    for number, path in enumerate(paths, 1):
+        job.step(number, len(paths), t("Dateien lesen"))
+        try:
+            track = library.read_track(path)
+        except Exception as exc:  # defekte Dateien dürfen den Lauf nicht abbrechen
+            print(t("Fehler bei {path}: {reason}", path=path, reason=exc))
+            continue
+        track.artist, track.title = identify(track)
+        tracks.append(track)
+    folders = {os.path.dirname(track.path) for track in tracks}
+    taken = {system.fold(os.path.join(folder, name)) for folder in folders for name in os.listdir(folder)}
+    rows, skipped = plan_renames(tracks, args.muster.split("/")[-1], None, taken)
+    run_renames(args, rows, skipped, None)
 
 
 def cmd_undo(args):

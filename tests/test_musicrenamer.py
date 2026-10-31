@@ -181,6 +181,47 @@ class Renaming(Base):
         cli.cmd_undo(None)
         self.assertEqual(sorted(os.listdir(self.root)), ["kein tag.mp3", "x.mp3", "y.mp3"])
 
+    def rename_files(self, *paths, muster="{artist} - {title}"):
+        cli.cmd_rename_files(Namespace(dateien=[self.path(p) for p in paths], muster=muster, apply=True))
+
+    def test_dropped_file_is_renamed_in_its_folder(self):
+        make_mp3(self.path("Sub", "x.mp3"), 1, tags={"artist": "Queen", "title": "Song"})
+        make_mp3(self.path("Sub", "bleibt.mp3"), 2, tags={"artist": "A", "title": "B"})
+        self.rename_files("Sub/x.mp3")
+        self.assertEqual(sorted(os.listdir(self.path("Sub"))), ["Queen - Song.mp3", "bleibt.mp3"])
+
+    def test_dropped_file_without_tags_uses_its_name(self):
+        make_mp3(self.path("01 Queen - Song.mp3"), 1)
+        self.rename_files("01 Queen - Song.mp3")
+        self.assertEqual(os.listdir(self.root), ["Queen - Song.mp3"])
+
+    def test_dropped_folder_counts_its_files_and_skips_other_files(self):
+        make_mp3(self.path("Sub", "x.mp3"), 1, tags={"artist": "Queen", "title": "Song"})
+        make_mp3(self.path("Sub", "Dubletten", "y.mp3"), 2, tags={"artist": "A", "title": "B"})
+        with open(self.path("text.txt"), "w") as f:
+            f.write("x")
+        self.rename_files("Sub", "text.txt", "Sub/x.mp3")
+        self.assertEqual(sorted(os.listdir(self.path("Sub"))), ["Dubletten", "Queen - Song.mp3"])
+        self.assertEqual(os.listdir(self.path("Sub", "Dubletten")), ["y.mp3"])
+
+    def test_dropped_file_does_not_overwrite_a_neighbour(self):
+        make_mp3(self.path("x.mp3"), 1, tags={"artist": "Queen", "title": "Song"})
+        with open(self.path("Queen - Song.mp3"), "w") as f:
+            f.write("fremd")
+        self.rename_files("x.mp3")
+        self.assertEqual(sorted(os.listdir(self.root)), ["Queen - Song (2).mp3", "Queen - Song.mp3"])
+
+    def test_dropped_file_ignores_folders_in_the_pattern(self):
+        make_mp3(self.path("x.mp3"), 1, tags={"artist": "Queen", "title": "Song"})
+        self.rename_files("x.mp3", muster="{artist}/{title}")
+        self.assertEqual(os.listdir(self.root), ["Song.mp3"])
+
+    def test_dropped_rename_can_be_undone(self):
+        make_mp3(self.path("x.mp3"), 1, tags={"artist": "Queen", "title": "Song"})
+        self.rename_files("x.mp3")
+        cli.cmd_undo(None)
+        self.assertEqual(os.listdir(self.root), ["x.mp3"])
+
     def test_mac_treats_spellings_of_a_name_as_the_same_path(self):
         with mock.patch.object(cli.system, "MACOS", True):
             self.assertEqual(cli.system.fold("Müller.MP3"), cli.system.fold("müller.mp3"))

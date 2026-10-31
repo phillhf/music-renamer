@@ -46,6 +46,8 @@ Jeder Lauf zeigt Fortschritt und Restzeit und lässt sich mit „Abbrechen“ st
    Auf Wunsch bettet das Programm fehlende Cover aus dem [Cover Art Archive](https://coverartarchive.org) und Songtexte von [LRCLIB](https://lrclib.net) ein. Vorhandene bleiben unberührt. Heruntergeladen wird erst bei „Ausführen“.
 3. **Dateien umbenennen und sortieren.** Das Muster bestimmt den Namen, Standard ist `{artist} - {title}`. Verfügbar sind `{artist}`, `{title}`, `{album}`, `{albumartist}`, `{year}`, `{genre}` und `{track}`. Ein `/` erzeugt Ordner, zum Beispiel sortiert `{artist}/{album}/{track} - {title}` die ganze Sammlung nach Interpret und Album; leere Ordner werden dabei entfernt. Dateien ohne Interpret oder Titel werden übersprungen.
 
+**Dateien direkt umbenennen.** Audiodateien oder Ordner aus dem Explorer oder Finder einfach ins Fenster ziehen. Eine Sammlung muss dafür nicht gewählt sein. Das Programm nimmt das eingestellte Muster und zeigt die neuen Namen in der Prüfansicht, umbenannt wird erst nach der Bestätigung. Interpret und Titel kommen aus den Tags, sonst aus dem bisherigen Dateinamen. Die Dateien bleiben in ihrem Ordner, bei einem Muster mit Ordnern zählt nur der letzte Teil. Dateien, aus denen sich kein Interpret und Titel ableiten lässt, bleiben unverändert; bei ihnen hilft zuerst Schritt 2. Die Umbenennung steht wie alle anderen im Verlauf.
+
 Der **Tag-Editor** zeigt alle Dateien mit Suche. Mehrere Dateien lassen sich auswählen und gemeinsam ändern: Nur ausgefüllte Felder werden gespeichert.
 
 Der **Verlauf** listet alle ausgeführten Schritte mit Datum, auch Änderungen aus dem Tag-Editor. Zurücknehmen geht bis zu einem gewählten Schritt; neuere Schritte werden dabei mit zurückgenommen, weil sie darauf aufbauen.
@@ -94,4 +96,4 @@ Für ein Release `__version__` in `musicrenamer/__init__.py` erhöhen, committen
 
 ## Lizenz
 
-GPL-3.0, siehe [LICENSE](LICENSE). Enthält [mutagen](https://github.com/quodlibet/mutagen) (GPL-2.0-or-later) und [fpcalc](https://github.com/acoustid/chromaprint) (LGPL/MIT).
+GPL-3.0, siehe [LICENSE](LICENSE). Enthält [mutagen](https://github.com/quodlibet/mutagen) (GPL-2.0-or-later), [tkinterdnd2](https://github.com/Eliav2/tkinterdnd2) (MIT) und [fpcalc](https://github.com/acoustid/chromaprint) (LGPL/MIT).

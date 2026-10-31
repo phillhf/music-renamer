@@ -11,6 +11,8 @@ import webbrowser
 from argparse import Namespace
 from tkinter import filedialog, messagebox, ttk
 
+from tkinterdnd2 import DND_FILES, TkinterDnD
+
 from . import __version__, cli, genres, i18n, journal, system, updater
 from .editor import TagEditor
 from .i18n import format_duration, t
@@ -89,7 +91,7 @@ class HistoryWindow(tk.Toplevel):
             self.refresh()
 
 
-class App(tk.Tk):
+class App(tk.Tk, TkinterDnD.DnDWrapper):
     def __init__(self, auto_update_check=True):
         super().__init__()
         settings = load_settings()
@@ -118,6 +120,7 @@ class App(tk.Tk):
         self.language = tk.StringVar(value=next(k for k, v in i18n.LANGUAGES.items() if v == i18n.language))
         self.progress_text = tk.StringVar()
         self._build()
+        self._enable_drop()
         job.listener = lambda *values: self.events.put(("progress", values))
         self.after(100, self._drain_events)
         if auto_update_check:
@@ -174,10 +177,15 @@ class App(tk.Tk):
         ttk.Label(key_row, text=t("Discogs-Token:")).pack(side="left", padx=(14, 4))
         ttk.Entry(key_row, textvariable=self.discogs_token, width=18, show="*").pack(side="left")
         self._step(main, 5, t("3. Dateien umbenennen und sortieren"), self._rename)
-        rename = ttk.Frame(main)
-        rename.grid(row=6, column=0, columnspan=3, sticky="ew")
+        section = ttk.Frame(main)
+        section.grid(row=6, column=0, columnspan=3, sticky="ew")
+        rename = ttk.Frame(section)
+        rename.pack(fill="x")
         ttk.Label(rename, text=t("Muster:")).pack(side="left", padx=(0, 4))
         ttk.Combobox(rename, textvariable=self.pattern, values=cli.PATTERNS).pack(side="left", fill="x", expand=True)
+        self.drop_zone = ttk.Label(section, text=t("Audiodateien oder Ordner hier ablegen, um sie direkt umzubenennen"),
+                                   anchor="center", relief="groove", padding=8)
+        self.drop_zone.pack(fill="x", pady=(6, 0))
 
         self.log = tk.Text(main, height=6, state="disabled", wrap="word")
         self.log.grid(row=7, column=0, columnspan=3, sticky="nsew", pady=8)
@@ -203,6 +211,31 @@ class App(tk.Tk):
         language.pack(side="right")
         language.bind("<<ComboboxSelected>>", self._language_changed)
         ttk.Label(bottom, text=t("Sprache:")).pack(side="right", padx=(0, 4))
+
+    def _enable_drop(self):
+        """Macht das ganze Fenster zum Ablageziel; ohne tkdnd geht alles andere weiter."""
+        try:
+            TkinterDnD._require(self)
+        except (RuntimeError, tk.TclError) as exc:
+            self.drop_zone.pack_forget()
+            self._print(t("Dateien ablegen ist nicht verfügbar: {reason}", reason=exc))
+            return
+        widgets = [self]
+        while widgets:
+            widget = widgets.pop()
+            widget.drop_target_register(DND_FILES)
+            widget.dnd_bind("<<Drop>>", self._drop)
+            widgets.extend(widget.winfo_children())
+
+    def _drop(self, event):
+        if str(self.cancel_button.cget("state")) == "normal":
+            self._print(t("Bitte warten, bis der laufende Schritt fertig ist."))
+            return event.action
+        paths = self.tk.splitlist(event.data)
+        settings = self._save()
+        self._run_background(cli.cmd_rename_files, Namespace(dateien=paths, muster=settings["muster"], apply=True,
+                                                             review=self._ask_review))
+        return event.action
 
     def _step(self, parent, row, label, action):
         ttk.Label(parent, text=label).grid(row=row, column=0, columnspan=2, sticky="w", pady=(6, 2))

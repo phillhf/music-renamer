@@ -19,7 +19,7 @@ fi
 # Die mitgelieferte Bash 3.2 lehnt ein leeres "${extra[@]}" unter set -u ab
 python -m PyInstaller --noconfirm --windowed --name "Music Renamer" \
     --osx-bundle-identifier io.github.phillhf.musicrenamer \
-    --icon "$PWD/installer/app.icns" ${extra[@]+"${extra[@]}"} \
+    --icon "$PWD/installer/app.icns" --collect-all tkinterdnd2 ${extra[@]+"${extra[@]}"} \
     --distpath dist --workpath build/pyinstaller --specpath build app.py
 
 app="dist/Music Renamer.app"
