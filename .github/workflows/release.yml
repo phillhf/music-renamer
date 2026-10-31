@@ -110,7 +110,7 @@ jobs:
           vtool -show-build "$app" | grep -E 'minos|version' || otool -l "$app" | grep -A3 LC_VERSION_MIN
           "$app" & pid=$!
           sleep 15
-          screencapture -x fenster.png || true
+          screencapture -x dist/fenster.png || true
           kill -0 "$pid"
           kill "$pid"
 
@@ -121,7 +121,7 @@ jobs:
           path: |
             dist/*.dmg
             dist/*.sha256
-            fenster.png
+            dist/fenster.png
 
   publish:
     if: github.ref_type == 'tag'

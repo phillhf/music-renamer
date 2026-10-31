@@ -36,7 +36,9 @@ jobs:
       - name: ffmpeg und fpcalc holen
         if: runner.os == 'macOS'
         run: |
-          brew install ffmpeg
+          # Das normale Paket kann kein Vorbis und Opus schreiben
+          brew install ffmpeg-full
+          echo "$(brew --prefix ffmpeg-full)/bin" >> "$GITHUB_PATH"
           gh release download v1.5.1 --repo acoustid/chromaprint --pattern "chromaprint-fpcalc-1.5.1-macos-universal.tar.gz" --output fpcalc.tar.gz
           mkdir -p tools fpcalc
           tar xzf fpcalc.tar.gz -C fpcalc
