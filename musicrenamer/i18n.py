@@ -7,6 +7,7 @@ FIELD_LABELS = {"artist": "Interpret", "title": "Titel", "album": "Album", "albu
 EN = {
     "Abbrechen": "Cancel",
     "Abbruch: {reason}. Bisherige Treffer sind gespeichert, einfach erneut starten.": "Stopped: {reason}. Results so far are saved, just start again.",
+    "Installation fehlgeschlagen ({reason}). Von Hand: sudo apt install {path}": "Installation failed ({reason}). By hand: sudo apt install {path}",
     "Achtung: keine Verbindung zu {host}. Pausiert, es geht von selbst weiter, sobald sie wieder steht.": "Warning: no connection to {host}. Paused, it continues by itself once the connection is back.",
     "Aus früheren Läufen übernommen: {count} Titel.": "Taken from earlier runs: {count} tracks.",
     "Pausiert, keine Verbindung zu {host} seit {time}": "Paused, no connection to {host} for {time}",
@@ -138,6 +139,13 @@ EN = {
 def t(text, **values):
     translated = EN.get(text, text) if language == "en" else text
     return translated.format(**values) if values else translated
+
+
+def progress_line(done, total, text, left):
+    status = f"{text}: {t('{done} von {total}', done=done, total=total)}"
+    if left is not None and left >= 1:
+        status += f", {t('Restzeit etwa {time}', time=format_duration(left))}"
+    return status
 
 
 def format_duration(seconds):

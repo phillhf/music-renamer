@@ -368,8 +368,9 @@ class DataFolder(unittest.TestCase):
 
 class Updates(unittest.TestCase):
     def setUp(self):
-        for patcher in (mock.patch.object(updater, "ASSET_PATTERN", updater.asset_pattern(False, "AMD64")),
-                        mock.patch.object(updater.system, "MACOS", False)):
+        for patcher in (mock.patch.object(updater, "ASSET_PATTERN", updater.asset_pattern(False, "AMD64", False)),
+                        mock.patch.object(updater.system, "MACOS", False),
+                        mock.patch.object(updater.system, "LINUX", False)):
             patcher.start()
             self.addCleanup(patcher.stop)
 
@@ -381,9 +382,31 @@ class Updates(unittest.TestCase):
     def test_mac_gets_the_build_for_its_processor(self):
         names = ["Music-Renamer-Setup-1.2.0.exe", "Music-Renamer-1.2.0-macOS-arm64.dmg",
                  "Music-Renamer-1.2.0-macOS-intel.dmg"]
-        chosen = {machine: [n for n in names if updater.asset_pattern(True, machine).match(n)]
+        chosen = {machine: [n for n in names if updater.asset_pattern(True, machine, False).match(n)]
                   for machine in ("arm64", "x86_64")}
         self.assertEqual(chosen, {"arm64": names[1:2], "x86_64": names[2:]})
+
+    def test_linux_gets_the_window_package_for_its_processor(self):
+        names = ["Music-Renamer-Setup-1.2.0.exe", "music-renamer_1.2.0_amd64.deb", "music-renamer_1.2.0_arm64.deb",
+                 "music-renamer-cli_1.2.0_amd64.deb", "music-renamer-cli_1.2.0_arm64.deb"]
+        chosen = {machine: [n for n in names if updater.asset_pattern(False, machine, True).match(n)]
+                  for machine in ("x86_64", "aarch64")}
+        self.assertEqual(chosen, {"x86_64": names[1:2], "aarch64": names[2:3]})
+
+    def test_linux_installs_through_apt_and_restarts(self):
+        with mock.patch.object(updater.system, "LINUX", True), mock.patch.object(updater.subprocess, "run") as run, \
+                mock.patch.object(updater.subprocess, "Popen") as popen:
+            updater.start_installer("/tmp/x.deb")
+        self.assertEqual(run.call_args[0][0], ["pkexec", "apt-get", "install", "-y", "/tmp/x.deb"])
+        self.assertEqual(popen.call_args[0][0], ["music-renamer"])
+
+    def test_refused_linux_install_names_the_manual_way(self):
+        with mock.patch.object(updater.system, "LINUX", True), \
+                mock.patch.object(updater.subprocess, "run", side_effect=FileNotFoundError("pkexec")), \
+                mock.patch.object(updater.subprocess, "Popen") as popen, \
+                self.assertRaisesRegex(RuntimeError, "sudo apt install /tmp/x.deb"):
+            updater.start_installer("/tmp/x.deb")
+        popen.assert_not_called()
 
     def test_mac_opens_the_disk_image(self):
         with mock.patch.object(updater.system, "MACOS", True), \

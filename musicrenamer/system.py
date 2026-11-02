@@ -1,4 +1,4 @@
-"""Was sich zwischen Windows und macOS unterscheidet."""
+"""Was sich zwischen Windows, macOS und Linux unterscheidet."""
 import os
 import ssl
 import subprocess
@@ -6,13 +6,22 @@ import sys
 import unicodedata
 
 MACOS = sys.platform == "darwin"
+LINUX = sys.platform.startswith("linux")
 if MACOS:
     import certifi
+if LINUX and getattr(sys, "frozen", False):
+    # Das fertige Paket biegt den Pfad auf seine eigenen Bibliotheken um, das bricht fpcalc und xdg-open
+    original = os.environ.pop("LD_LIBRARY_PATH_ORIG", None)
+    os.environ.pop("LD_LIBRARY_PATH", None)
+    if original is not None:
+        os.environ["LD_LIBRARY_PATH"] = original
 
 
 def data_base():
     if MACOS:
         return os.path.expanduser("~/Library/Application Support")
+    if LINUX:
+        return os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
     return os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
 
 
@@ -27,6 +36,8 @@ def open_path(path):
     """Öffnet Datei oder Ordner mit dem Standardprogramm."""
     if MACOS:
         subprocess.Popen(["open", path])
+    elif LINUX:
+        subprocess.Popen(["xdg-open", path])
     else:
         os.startfile(path)
 

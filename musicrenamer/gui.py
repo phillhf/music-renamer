@@ -15,7 +15,7 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 
 from . import __version__, cli, genres, i18n, journal, system, updater
 from .editor import TagEditor
-from .i18n import format_duration, t
+from .i18n import progress_line, t
 from .job import Cancelled, job
 from .lookup import LEVELS, parse_accuracy
 from .review import ReviewWindow
@@ -273,10 +273,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
 
     def _show_progress(self, done, total, text, left):
         self.progress["value"] = done * 100 / total if total else 0
-        status = f"{text}: {t('{done} von {total}', done=done, total=total)}"
-        if left is not None and left >= 1:
-            status += f", {t('Restzeit etwa {time}', time=format_duration(left))}"
-        self.progress_text.set(status)
+        self.progress_text.set(progress_line(done, total, text, left))
 
     def _set_busy(self, busy):
         for button in self.buttons:

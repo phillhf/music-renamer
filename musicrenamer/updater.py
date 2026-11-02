@@ -11,12 +11,15 @@ import urllib.request
 from dataclasses import dataclass
 
 from . import __version__, system
+from .i18n import t
 
 REPO = "phillhf/music-renamer"
 API_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
 
 
-def asset_pattern(macos=system.MACOS, machine=platform.machine()):
+def asset_pattern(macos=system.MACOS, machine=platform.machine(), linux=system.LINUX):
+    if linux:
+        return re.compile(rf"^music-renamer_[\d.]+_{'arm64' if machine == 'aarch64' else 'amd64'}\.deb$")
     if macos:
         return re.compile(rf"^Music-Renamer-[\d.]+-macOS-{'arm64' if machine == 'arm64' else 'intel'}\.dmg$")
     return re.compile(r"^Music-Renamer-Setup-[\d.]+\.exe$")
@@ -88,7 +91,15 @@ def start_installer(path):
     """Startet das Setup still; es beendet die App und startet sie danach neu.
 
     Auf dem Mac öffnet es nur das Disk-Image, das Ersetzen geschieht dort von Hand.
+    Unter Linux fragt das System nach dem Passwort, das Paket läuft dann über apt.
     """
+    if system.LINUX:
+        try:
+            subprocess.run(["pkexec", "apt-get", "install", "-y", path], check=True)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise RuntimeError(t("Installation fehlgeschlagen ({reason}). Von Hand: sudo apt install {path}", reason=exc, path=path)) from exc
+        subprocess.Popen(["music-renamer"], start_new_session=True)
+        return
     if system.MACOS:
         subprocess.Popen(["open", path])
         return

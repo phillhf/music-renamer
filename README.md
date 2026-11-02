@@ -1,10 +1,47 @@
 # Music Renamer
 
-Räumt große Musiksammlungen unter Windows und macOS auf: Dubletten aussortieren, fehlende Metadaten, Cover und Songtexte ergänzen, Dateien einheitlich benennen und sortieren.
+Räumt große Musiksammlungen unter Windows, macOS und Linux auf: Dubletten aussortieren, fehlende Metadaten, Cover und Songtexte ergänzen, Dateien einheitlich benennen und sortieren.
 
 Bis Version 0.5.0 hieß das Programm MP3 Organizer. Das Update übernimmt Einstellungen und Verlauf; eine bestehende Installation bleibt in ihrem Ordner.
 
 Unterstützt MP3, FLAC, M4A, MP4, OGG, Opus und WMA. Cover lassen sich in WMA nicht einbetten.
+
+## Installation unter Debian und Ubuntu
+
+Es gibt zwei Pakete, die sich auch zusammen installieren lassen. Von der [Release-Seite](https://github.com/phillhf/music-renamer/releases/latest) das passende laden, `amd64` für übliche PCs, `arm64` zum Beispiel für den Raspberry Pi. Vorausgesetzt werden Debian 12, Ubuntu 22.04 oder neuer.
+
+- `music-renamer_x.y.z_amd64.deb`: die Version mit Fenster, danach im Anwendungsmenü
+- `music-renamer-cli_x.y.z_amd64.deb`: nur die Befehlszeile, ohne Grafikbibliotheken, auch für Server
+
+```bash
+sudo apt install ./music-renamer_0.10.0_amd64.deb
+```
+
+```bash
+sudo apt install ./music-renamer-cli_0.10.0_amd64.deb
+```
+
+Die Fenster-Version bietet neue Versionen beim Start an und installiert sie nach Eingabe des Passworts. Die Befehlszeile prüft das mit `music-renamer-cli update`, das neue Paket installiert man dort mit `apt` wie oben. Einstellungen und Berichte liegen in `~/.local/share/Music Renamer`. Zum Deinstallieren `sudo apt remove music-renamer music-renamer-cli`, die Daten bleiben dabei liegen.
+
+Die Klangerkennung ist in den `amd64`-Paketen enthalten, für `arm64` installiert `apt` sie als `libchromaprint-tools` mit.
+
+Die Befehlszeile bietet dieselben Schritte. Ohne `--apply` ändert sie nichts und schreibt nur die Vorschau. Mit `--apply` führt sie sofort aus, es gibt keine Prüfansicht, also vorher den Bericht ansehen. Den AcoustID-Key und das Discogs-Token liest sie aus den Umgebungsvariablen `ACOUSTID_KEY` und `DISCOGS_TOKEN`.
+
+```bash
+music-renamer-cli dubletten ~/Musik
+```
+
+```bash
+music-renamer-cli tags ~/Musik --cover --songtexte --apply
+```
+
+```bash
+music-renamer-cli umbenennen ~/Musik --apply
+```
+
+```bash
+music-renamer-cli undo
+```
 
 ## Installation auf dem Mac
 

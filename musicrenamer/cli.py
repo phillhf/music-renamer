@@ -3,6 +3,7 @@ import argparse
 import csv
 import os
 import sys
+import time
 from collections import Counter
 
 from . import __version__, genres, system, updater
@@ -10,7 +11,7 @@ from . import journal as journaling
 from . import library
 from .albums import align_albums
 from .dupes import find_duplicates
-from .i18n import t
+from .i18n import progress_line, t
 from .job import Cancelled, job
 from .lookup import Lookup, fetch_cover, fetch_lyrics, find_fpcalc
 from .names import clean, identify, normalize, safe_filename
@@ -36,6 +37,7 @@ REPORT_DIR = os.path.join(APP_DIR, "berichte")
 DB_PATH = os.path.join(DATA_DIR, "mp3org.sqlite")
 UNKNOWN_ALBUM = "Unbekanntes Album"
 MAX_FAILURES = 25
+PROGRESS_GAP = 30
 PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist}/{album}/{track} - {title}",
             "{albumartist}/{year} - {album}/{track} - {title}")
 
@@ -429,9 +431,22 @@ def cmd_update(args):
         print(t("Version {version} ist aktuell.", version=__version__))
 
 
+def console_progress():
+    """Macht lange Läufe auf der Konsole sichtbar, ohne sie zu fluten."""
+    last = [0.0]
+
+    def report(done, total, text, left):
+        now = time.monotonic()
+        if now - last[0] >= PROGRESS_GAP:
+            last[0] = now
+            print(progress_line(done, total, text, left), flush=True)
+    return report
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    parser = argparse.ArgumentParser(prog="musicrenamer", description="Musiksammlung aufräumen")
+    job.listener = console_progress()
+    parser = argparse.ArgumentParser(prog="music-renamer-cli", description="Musiksammlung aufräumen")
     commands = parser.add_subparsers(dest="command", required=True)
 
     def command(name, handler, help_text):
