@@ -6,106 +6,70 @@ Bis Version 0.5.0 hieß das Programm MP3 Organizer. Das Update übernimmt Einste
 
 Unterstützt MP3, FLAC, M4A, MP4, OGG, Opus und WMA. Cover lassen sich in WMA nicht einbetten.
 
-## Installation unter Debian und Ubuntu
+## Anleitungen
 
-Es gibt zwei Pakete, die sich auch zusammen installieren lassen. Von der [Release-Seite](https://github.com/phillhf/music-renamer/releases/latest) das passende laden, `amd64` für übliche PCs, `arm64` zum Beispiel für den Raspberry Pi. Vorausgesetzt werden Debian 12, Ubuntu 22.04 oder neuer.
+| Anleitung | Inhalt |
+|---|---|
+| [Windows](docs/Windows.md) | Installation, Update, Standby, Deinstallation, Lösungen für Probleme |
+| [macOS](docs/macOS.md) | Installation, erster Start trotz Warnung, Update, Deinstallation, Lösungen für Probleme |
+| [Linux](docs/Linux.md) | Pakete für Debian und Ubuntu, Update, Server, Deinstallation, Lösungen für Probleme |
+| [Bedienungsanleitung](docs/Bedienung.md) | alle Schritte und Optionen im Fenster, für alle Systeme gleich |
+| [Befehlszeile](docs/Befehlszeile.md) | alle Befehle und Optionen mit Beispielen |
 
-- `music-renamer_x.y.z_amd64.deb`: die Version mit Fenster, danach im Anwendungsmenü
-- `music-renamer-cli_x.y.z_amd64.deb`: nur die Befehlszeile, ohne Grafikbibliotheken, auch für Server
+## Schnellstart
+
+1. Lade das Paket für dein System von der [Release-Seite](https://github.com/phillhf/music-renamer/releases/latest):
+
+   | System | Datei |
+   |---|---|
+   | Windows | `Music-Renamer-Setup-x.y.z.exe` |
+   | Mac mit Apple-Chip | `Music-Renamer-x.y.z-macOS-arm64.dmg` |
+   | Mac mit Intel | `Music-Renamer-x.y.z-macOS-intel.dmg` |
+   | Debian, Ubuntu mit Fenster | `music-renamer_x.y.z_amd64.deb` oder `_arm64.deb` |
+   | Debian, Ubuntu, Befehlszeile | `music-renamer-cli_x.y.z_amd64.deb` oder `_arm64.deb` |
+
+2. Installiere es wie in der Anleitung für dein System beschrieben.
+3. Erstelle eine Sicherung deiner Musik und wähle sie im Programm als **Sammlung** aus.
+4. Arbeite die drei Schritte der Reihe nach ab: **Dubletten verschieben**, **Metadaten ergänzen**, **Dateien umbenennen und sortieren**. Jeder Schritt zeigt erst, was er vorhat, und führt es nach deiner Bestätigung aus.
+
+Gelöscht wird nie etwas: Dubletten werden nur verschoben, und jeder Schritt lässt sich im **Verlauf** zurücknehmen.
+
+## Was das Programm kann
+
+- **Dubletten finden:** am identischen Audioinhalt, auf Wunsch auch am Klang in anderer Bitrate oder anderem Format
+- **Metadaten ergänzen:** Interpret, Titel, Album, Album-Interpret, Jahr, Genre und Tracknummer aus [MusicBrainz](https://musicbrainz.org), der iTunes-Suche und optional [Discogs](https://www.discogs.com)
+- **Cover und Songtexte einbetten:** aus dem [Cover Art Archive](https://coverartarchive.org) und von [LRCLIB](https://lrclib.net)
+- **Am Klang erkennen:** auch Dateien ohne Tags und ohne brauchbaren Namen, mit einem kostenlosen Key von [AcoustID](https://acoustid.org/new-application)
+- **Umbenennen und sortieren:** nach frei wählbarem Muster, auf Wunsch in Ordner nach Interpret und Album
+- **Dateien ins Fenster ziehen:** direkt umbenennen, ohne Sammlung
+- **Prüfansicht, Tag-Editor, Verlauf:** jede Änderung vorher sehen, von Hand korrigieren und zurücknehmen
+- **Für große Sammlungen gebaut:** Treffer werden sofort gespeichert, und bei Verbindungsabbrüchen pausiert der Lauf und macht von selbst weiter
+
+Die Oberfläche gibt es auf Deutsch und Englisch.
+
+## Befehlszeile auf einen Blick
+
+Ohne `--apply` wird nur eine Vorschau geschrieben, mit `--apply` sofort und ohne Rückfrage ausgeführt. Der Befehl `music-renamer-cli` kommt aus dem gleichnamigen Linux-Paket, unter Windows und macOS läuft die Befehlszeile aus dem Quellcode. Beispiele und alle Details stehen in der [Befehlsreferenz](docs/Befehlszeile.md).
 
 ```bash
-sudo apt install ./music-renamer_0.10.1_amd64.deb
+music-renamer-cli dubletten ORDNER [--apply] [--klang] [--aehnlich] [--ziel ZIELORDNER]
 ```
 
 ```bash
-sudo apt install ./music-renamer-cli_0.10.1_amd64.deb
-```
-
-Die Fenster-Version bietet neue Versionen beim Start an und installiert sie nach Eingabe des Passworts. Die Befehlszeile prüft das mit `music-renamer-cli update`, das neue Paket installiert man dort mit `apt` wie oben. Einstellungen und Berichte liegen in `~/.local/share/Music Renamer`. Zum Deinstallieren `sudo apt remove music-renamer music-renamer-cli`, die Daten bleiben dabei liegen.
-
-Die Klangerkennung ist in den `amd64`-Paketen enthalten, für `arm64` installiert `apt` sie als `libchromaprint-tools` mit.
-
-Die Befehlszeile bietet dieselben Schritte. Ohne `--apply` ändert sie nichts und schreibt nur die Vorschau. Mit `--apply` führt sie sofort aus, es gibt keine Prüfansicht, also vorher den Bericht ansehen. Den AcoustID-Key und das Discogs-Token liest sie aus den Umgebungsvariablen `ACOUSTID_KEY` und `DISCOGS_TOKEN`.
-
-```bash
-music-renamer-cli dubletten ~/Musik
+music-renamer-cli tags ORDNER [--apply] [--cover] [--songtexte] [--genres] [--ueberschreiben] [--genauigkeit WERT] [--limit N]
 ```
 
 ```bash
-music-renamer-cli tags ~/Musik --cover --songtexte --apply
-```
-
-```bash
-music-renamer-cli umbenennen ~/Musik --apply
+music-renamer-cli umbenennen ORDNER [--apply] [--muster "MUSTER"]
 ```
 
 ```bash
 music-renamer-cli undo
 ```
 
-## Installation auf dem Mac
-
-Von der [Release-Seite](https://github.com/phillhf/music-renamer/releases/latest) die passende Datei laden: `…-macOS-arm64.dmg` für Macs mit Apple-Chip (M1 und neuer), `…-macOS-intel.dmg` für ältere Macs. Das Image öffnen und Music Renamer in den Programme-Ordner ziehen.
-
-Die App ist nicht von Apple beglaubigt, deshalb blockiert macOS den ersten Start. Einmal starten, dann unter Systemeinstellungen → Datenschutz & Sicherheit „Trotzdem öffnen“ wählen.
-
-Neue Versionen bietet das Programm beim Start an. Auf dem Mac lädt es das Image und öffnet es, die App zieht man dann wieder in den Programme-Ordner. Einstellungen und Berichte liegen in `~/Library/Application Support/Music Renamer` und bleiben dabei erhalten. Zum Deinstallieren die App in den Papierkorb legen und bei Bedarf diesen Ordner löschen.
-
-## Installation unter Windows
-
-Den aktuellen `Music-Renamer-Setup-x.y.z.exe` von der [Release-Seite](https://github.com/phillhf/music-renamer/releases/latest) laden und starten. Adminrechte sind nicht nötig. Der Installer ist nicht signiert, deshalb warnt Windows SmartScreen beim ersten Start („Weitere Informationen“ → „Trotzdem ausführen“).
-
-Der Standardordner ist `C:\Tools\Music Renamer`. Das Setup erkennt eine vorhandene Installation und aktualisiert sie, Einstellungen und Berichte bleiben dabei erhalten.
-
-Beim Start prüft das Programm, ob es auf GitHub eine neue Version gibt, und bietet das Update an. Über „Nach Updates suchen“ geht das auch von Hand.
-
-## Deinstallation unter Windows
-
-Über das Startmenü („Music Renamer deinstallieren“) oder die Windows-Einstellungen unter „Installierte Apps“. Der Uninstaller fragt, ob auch Einstellungen, Suchergebnisse, Berichte und Änderungsprotokolle entfernt werden sollen. Deine Musik und der Dubletten-Ordner bleiben in jedem Fall unberührt.
-
-## Benutzung
-
-Sammlung auswählen und die drei Schritte nacheinander abarbeiten. Jeder Schritt hat **Vorschau** (ändert nichts, schreibt einen CSV-Bericht) und **Prüfen und ausführen**. Die Berichte öffnen sich über „Berichte öffnen“.
-
-Die **Prüfansicht** zeigt jede geplante Änderung. Zeilen lassen sich abwählen und Felder per Doppelklick korrigieren; ausgeführt wird nur, was angehakt ist. Bei Dubletten lassen sich beide Dateien im Standard-Player anhören, und „Tauschen“ behält die andere Datei.
-
-Jeder Lauf zeigt Fortschritt und Restzeit und lässt sich mit „Abbrechen“ stoppen. Bereits Erledigtes bleibt erhalten, gesuchte Treffer auch, sodass der nächste Lauf dort weitermacht.
-
-1. **Dubletten verschieben.** Identische Audiodaten werden auch bei unterschiedlichen Tags und Namen erkannt. Behalten wird die Datei mit der höchsten Bitrate, danach die mit den meisten Tags. Der Rest wandert nach `<Sammlung>\Dubletten`, also zum Beispiel von `C:\Musik` nach `C:\Musik\Dubletten`, gelöscht wird nichts. Alle Schritte lassen diesen Ordner aus. Mit „Am Klang vergleichen“ findet das Programm dieselbe Aufnahme auch in anderer Bitrate oder anderem Format, unabhängig von den Tags; dafür analysiert es jede Datei einmal, etwa eine Sekunde je Datei. Einen Key braucht das nicht. Ähnliche Dubletten (gleicher Interpret und Titel, Länge bis 2 Sekunden Abstand) werden nur verschoben, wenn das Häkchen gesetzt ist. Live-Versionen und Remixe zählen nicht als gleich.
-2. **Metadaten ergänzen.** Interpret und Titel kommen aus den Tags oder dem Dateinamen, Album, Jahr, Genre und Tracknummer aus [MusicBrainz](https://musicbrainz.org) und bei Bedarf aus der iTunes-Suche. Standardmäßig werden nur leere Felder und Platzhalter wie „Track 01“ gefüllt. Dateien ohne sicheren Treffer bleiben unverändert und stehen in `nicht-gefunden.csv`.
-
-   Ein Ordner gilt als Album: Passen mindestens drei Titel und 60 % des Ordners oder mindestens fünf Titel zum selben Album, bekommen sie dieses Album samt Tracknummern und Album-Interpret, auch wenn einzelne Titel für sich eher zu einem Sampler passen würden. Enthält ein Ordner mehrere Alben, werden sie nacheinander erkannt. Bereits vollständige Titel im selben Ordner zählen dabei mit, behalten aber ihre Tags.
-
-   „Genres vereinheitlichen“ führt Varianten wie „Synth-Pop“ auf eine kurze Liste zurück, auch bei schon getaggten Dateien. Eigene Zuordnungen stehen in der Datei, die „Genre-Regeln“ öffnet, zum Beispiel `"krautrock": "Rock"`.
-
-   Findet MusicBrainz nichts, fragt das Programm die Klangerkennung und danach [Discogs](https://www.discogs.com/settings/developers), falls ein Token eingetragen ist.
-
-   Auf Wunsch bettet das Programm fehlende Cover aus dem [Cover Art Archive](https://coverartarchive.org) und Songtexte von [LRCLIB](https://lrclib.net) ein. Vorhandene bleiben unberührt. Heruntergeladen wird erst bei „Ausführen“.
-3. **Dateien umbenennen und sortieren.** Das Muster bestimmt den Namen, Standard ist `{artist} - {title}`. Verfügbar sind `{artist}`, `{title}`, `{album}`, `{albumartist}`, `{year}`, `{genre}` und `{track}`. Ein `/` erzeugt Ordner, zum Beispiel sortiert `{artist}/{album}/{track} - {title}` die ganze Sammlung nach Interpret und Album; leere Ordner werden dabei entfernt. Dateien ohne Interpret oder Titel werden übersprungen.
-
-**Dateien direkt umbenennen.** Audiodateien oder Ordner aus dem Explorer oder Finder einfach ins Fenster ziehen. Eine Sammlung muss dafür nicht gewählt sein. Das Programm nimmt das eingestellte Muster und zeigt die neuen Namen in der Prüfansicht, umbenannt wird erst nach der Bestätigung. Interpret und Titel kommen aus den Tags, sonst aus dem bisherigen Dateinamen. Die Dateien bleiben in ihrem Ordner, bei einem Muster mit Ordnern zählt nur der letzte Teil. Dateien, aus denen sich kein Interpret und Titel ableiten lässt, bleiben unverändert; bei ihnen hilft zuerst Schritt 2. Die Umbenennung steht wie alle anderen im Verlauf.
-
-Der **Tag-Editor** zeigt alle Dateien mit Suche. Mehrere Dateien lassen sich auswählen und gemeinsam ändern: Nur ausgefüllte Felder werden gespeichert.
-
-Der **Verlauf** listet alle ausgeführten Schritte mit Datum, auch Änderungen aus dem Tag-Editor. Zurücknehmen geht bis zu einem gewählten Schritt; neuere Schritte werden dabei mit zurückgenommen, weil sie darauf aufbauen.
-
-Die Oberfläche gibt es auf Deutsch und Englisch, die Sprache gilt ab dem nächsten Start.
-
-## Laufzeit
-
-MusicBrainz erlaubt eine Anfrage pro Sekunde, 10.000 Titel dauern also mehrere Stunden. Alle Treffer werden gespeichert: Ein abgebrochener Lauf setzt beim nächsten Start ohne Verlust fort, und „Ausführen“ nach der Vorschau geht schnell.
-
-Reißt die Verbindung ab, wiederholt das Programm die Anfrage und pausiert danach, auch über Tage. Das Fenster zeigt, seit wann, und der Lauf geht von selbst weiter, sobald die Verbindung wieder steht. Fällt nur ein Zusatzdienst für Cover, Songtexte, Genres oder Discogs aus, wird er 10 Minuten ausgelassen. Fehlende Cover und Songtexte holt ein erneuter Lauf nach.
-
-## Dateien ohne brauchbaren Namen
-
-Dateien wie `track01.mp3` ohne Tags lassen sich nur am Klang erkennen. Dafür einen kostenlosen Key auf [acoustid.org](https://acoustid.org/new-application) anlegen (der Link „Key holen“ im Programm führt direkt dorthin) und im Feld „AcoustID-Key“ eintragen. Das nötige `fpcalc` ist im Installer enthalten.
-
-Die Auswahl „Genauigkeit Klangerkennung“ legt fest, wie sicher ein Treffer mindestens sein muss: Streng (95 %), Normal (85 %) oder Locker (70 %). Im Feld „eigener Wert“ lässt sich stattdessen eine Zahl von 1 bis 100 eintragen, sie hat dann Vorrang vor der Auswahl. Der Wert lässt sich jederzeit ohne neue Analyse ändern. `tags-vorschau.csv` zeigt den Trefferwert jeder Datei, `nicht-gefunden.csv` den Wert abgelehnter Treffer. Bei Treffern über Name und Tags ist er die Namensähnlichkeit, dafür gilt fest ein Mindestwert von 85 %. Der Wert sagt, wie gut Klang oder Name passen, nicht ob Album und Jahr stimmen.
-
-## Daten
-
-Datenbank, Protokolle und Berichte liegen unter Windows in `%LOCALAPPDATA%\Music Renamer`, auf dem Mac in `~/Library/Application Support/Music Renamer`.
+```bash
+music-renamer-cli update
+```
 
 ## Entwicklung
 
@@ -129,7 +93,7 @@ Programm und Installer lokal bauen (braucht PyInstaller und Inno Setup 6):
 powershell -ExecutionPolicy Bypass -File installer\build.ps1
 ```
 
-Auf einem Mac baut `bash installer/build_mac.sh` App und Disk-Image für den eigenen Prozessor.
+Auf einem Mac baut `bash installer/build_mac.sh` App und Disk-Image für den eigenen Prozessor, unter Debian oder Ubuntu `bash installer/build_deb.sh` die beiden Pakete.
 
 Für ein Release `__version__` in `musicrenamer/__init__.py` erhöhen, committen und einen passenden Tag pushen, zum Beispiel `v0.2.0`. GitHub Actions baut daraus den Installer und veröffentlicht ihn.
 
