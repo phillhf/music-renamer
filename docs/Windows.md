@@ -21,7 +21,9 @@ Von der Installation bis zur Deinstallation. Wie die drei Arbeitsschritte im Pro
 3. Starte die Datei. Adminrechte brauchst du nicht.
 4. Der Installer ist nicht signiert, deshalb warnt Windows SmartScreen mit „Der Computer wurde durch Windows geschützt“. Klicke auf **Weitere Informationen** und dann auf **Trotzdem ausführen**.
 5. Wähle den Zielordner. Standard ist `C:\Tools\Music Renamer`.
-6. Setze auf Wunsch das Häkchen für das Desktop-Symbol und schließe die Installation ab.
+6. Wähle die Zusatzoptionen und schließe die Installation ab:
+   - **Verknüpfung auf dem Desktop anlegen**
+   - **Befehlszeile hinzufügen**, wenn du das Programm auch im Terminal nutzen willst, siehe [Befehlszeile unter Windows](#befehlszeile-unter-windows)
 
 Danach findest du das Programm im Startmenü. Die Klangerkennung `fpcalc` ist bereits enthalten, du musst nichts nachinstallieren.
 
@@ -30,7 +32,7 @@ Eine vorhandene Installation erkennt das Setup und aktualisiert sie. Das gilt au
 Für Administratoren gibt es ein stilles Setup:
 
 ```powershell
-.\Music-Renamer-Setup-0.10.1.exe /VERYSILENT /DIR="D:\Music Renamer" /TASKS="desktopicon"
+.\Music-Renamer-Setup-0.11.0.exe /VERYSILENT /DIR="D:\Music Renamer" /TASKS="desktopicon,cli"
 ```
 
 ## Erster Start
@@ -57,7 +59,7 @@ Zum schnellen Umbenennen einzelner Dateien ziehst du sie aus dem Explorer direkt
 
 Beim Start prüft das Programm, ob es auf GitHub eine neue Version gibt, und fragt nach. Bestätigst du, lädt es das Setup, prüft die Prüfsumme, installiert es und startet neu. Über **Nach Updates suchen** geht das auch von Hand.
 
-Einstellungen, Treffer, Berichte und Verlauf bleiben erhalten.
+Einstellungen, Treffer, Berichte und Verlauf bleiben erhalten. Die Befehlszeile wird mit aktualisiert, wenn sie installiert ist. Läuft sie dabei gerade, wird sie beendet, und du startest den Befehl danach einfach neu.
 
 ## Lange Läufe und Standby
 
@@ -86,48 +88,62 @@ Alles liegt unter `%LOCALAPPDATA%\Music Renamer`, also meist `C:\Users\DEINNAME\
 
 Über das Startmenü mit **Music Renamer deinstallieren** oder in den Windows-Einstellungen unter **Apps** → **Installierte Apps**.
 
-Der Uninstaller fragt, ob auch Einstellungen, Suchergebnisse, Berichte und Änderungsprotokolle entfernt werden sollen. Antworte mit **Nein**, wenn du später weitermachen willst. Deine Musik und der Dubletten-Ordner bleiben in jedem Fall unberührt.
+Die Befehlszeile wird mit entfernt, auch aus dem Pfad. Der Uninstaller fragt, ob auch Einstellungen, Suchergebnisse, Berichte und Änderungsprotokolle entfernt werden sollen. Antworte mit **Nein**, wenn du später weitermachen willst. Deine Musik und der Dubletten-Ordner bleiben in jedem Fall unberührt.
 
 ## Befehlszeile unter Windows
 
-Das Setup enthält nur die Version mit Fenster. Die Befehlszeile läuft unter Windows aus dem Quellcode, das braucht niemand für die normale Nutzung.
+Die Befehlszeile ist eine Option im Setup. Sie läuft ohne Python und bringt die Klangerkennung mit.
 
-1. Installiere Python 3.13 oder neuer von [python.org](https://www.python.org/downloads/). Setze im Setup das Häkchen **Add python.exe to PATH**.
-2. Lade auf der [Release-Seite](https://github.com/phillhf/music-renamer/releases/latest) **Source code (zip)** und entpacke die Datei, zum Beispiel nach `C:\Tools\music-renamer`.
-3. Öffne PowerShell und wechsle in den Ordner:
+**Einrichten:**
 
-   ```powershell
-   cd C:\Tools\music-renamer
-   ```
-
-4. Installiere die Abhängigkeiten:
+1. Starte das aktuelle Setup, auch wenn das Programm schon installiert ist.
+2. Setze bei den Zusatzoptionen das Häkchen **Befehlszeile hinzufügen**.
+3. Schließe die Installation ab und öffne danach **ein neues Terminal**. Offene Fenster kennen den Befehl noch nicht.
+4. Probiere es aus:
 
    ```powershell
-   python -m pip install -r requirements.txt
+   music-renamer-cli --help
    ```
 
-5. Probiere es aus:
+**Beispiele:**
 
-   ```powershell
-   python -m musicrenamer --help
-   ```
-
-Ein Beispiel:
+Vorschau:
 
 ```powershell
-python -m musicrenamer tags "C:\Musik" --cover --songtexte
+music-renamer-cli tags "C:\Musik" --cover --songtexte
 ```
 
-Alle Befehle stehen in der [Befehlsreferenz](Befehlszeile.md). Für die Klangerkennung (`--klang` und AcoustID-Key) lädst du `fpcalc.exe` von den [Chromaprint-Downloads](https://github.com/acoustid/chromaprint/releases) und legst sie im Programmordner unter `tools\fpcalc.exe` ab.
+Ausführen:
+
+```powershell
+music-renamer-cli tags "C:\Musik" --cover --songtexte --apply
+```
+
+Ohne `--apply` wird nichts geändert, mit `--apply` sofort ausgeführt, ohne Rückfrage. Alle Befehle stehen in der [Befehlsreferenz](Befehlszeile.md).
+
+Das Programm liegt im Unterordner `cli` des Programmordners, standardmäßig also in `C:\Tools\Music Renamer\cli`, und nutzt dieselben Treffer und denselben Verlauf wie das Fenster. Lass aber nicht beides gleichzeitig laufen.
+
+**Key und Token dauerhaft speichern**, gilt ab dem nächsten neuen Terminal:
+
+```powershell
+setx ACOUSTID_KEY "dein-key"
+```
+
+```powershell
+setx DISCOGS_TOKEN "dein-token"
+```
+
+**Entfernen:** Starte das Setup erneut und nimm das Häkchen heraus. Dann verschwindet nur die Befehlszeile, das Programm bleibt.
 
 ## Wenn etwas nicht klappt
 
 | Problem | Lösung |
 |---|---|
 | SmartScreen lässt das Setup nicht starten | **Weitere Informationen**, dann **Trotzdem ausführen**. Wird das Blockieren von deiner Firma verwaltet, frage die IT |
-| Das Antivirenprogramm meldet das Setup | Unsignierte Programme werden manchmal fälschlich gemeldet. Die Prüfsumme steht in der `.sha256`-Datei auf der Release-Seite, prüfen kannst du sie mit `Get-FileHash .\Music-Renamer-Setup-0.10.1.exe` |
+| Das Antivirenprogramm meldet das Setup | Unsignierte Programme werden manchmal fälschlich gemeldet. Die Prüfsumme steht in der `.sha256`-Datei auf der Release-Seite, prüfen kannst du sie mit `Get-FileHash .\Music-Renamer-Setup-0.11.0.exe` |
 | Dateien lassen sich nicht ändern | Schließe Player, die die Musik gerade nutzen, und prüfe, ob die Dateien schreibgeschützt sind. Das Programm meldet solche Dateien im Protokoll und läuft weiter |
 | Pfad zu lang | Sehr tiefe Ordner können die Grenze von Windows überschreiten. Nutze ein kürzeres Muster oder einen kürzeren Sammlungsordner |
+| `music-renamer-cli` wird nicht erkannt | Öffne ein neues Terminal. Hilft das nicht, starte das Setup erneut und prüfe das Häkchen **Befehlszeile hinzufügen** |
 | Das Update schlägt fehl | Lade das aktuelle Setup von der Release-Seite und installiere es darüber |
 
 Weitere Hilfe findest du in der [Bedienungsanleitung](Bedienung.md#wenn-etwas-nicht-klappt). Fehler kannst du auf [GitHub melden](https://github.com/phillhf/music-renamer/issues).

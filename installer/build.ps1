@@ -1,4 +1,4 @@
-# Baut dist\MusicRenamer (PyInstaller) und dist\Music-Renamer-Setup-<Version>.exe (Inno Setup 6).
+# Baut dist\MusicRenamer und dist\music-renamer-cli (PyInstaller) und dist\Music-Renamer-Setup-<Version>.exe (Inno Setup 6).
 # Die Version kommt ausschliesslich aus musicrenamer\__init__.py (__version__ = "x.y.z").
 # Aufruf aus dem Projektordner:  powershell -ExecutionPolicy Bypass -File installer\build.ps1 [-SkipTests]
 
@@ -49,6 +49,11 @@ else { Write-Warning "tools\fpcalc.exe fehlt, Build ohne Klangerkennung" }
 & $python -m PyInstaller --noconfirm --windowed --name MusicRenamer `
     --icon "$root\installer\app.ico" --add-data "$root\installer\app.ico;." --collect-all tkinterdnd2 --version-file "$root\build\version_info.txt" `
     @extra --distpath dist --workpath build\pyinstaller --specpath build app.py
+if ($LASTEXITCODE -ne 0) { throw "PyInstaller fehlgeschlagen" }
+
+& $python -m PyInstaller --noconfirm --console --name music-renamer-cli `
+    --icon "$root\installer\app.ico" --exclude-module tkinter --exclude-module tkinterdnd2 `
+    @extra --distpath dist --workpath build\pyinstaller --specpath build cli_app.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller fehlgeschlagen" }
 
 $iscc = @(

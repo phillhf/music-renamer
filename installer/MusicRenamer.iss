@@ -3,7 +3,7 @@
 ;   oder direkt: ISCC.exe /DAppVersion=x.y.z installer\MusicRenamer.iss
 ;
 ; Ohne Administratorrechte. Datenbank, Protokolle und Berichte liegen unter %LOCALAPPDATA%\Music Renamer.
-; Stilles Setup:  Music-Renamer-Setup-x.y.z.exe /VERYSILENT [/DIR="D:\Music Renamer"] [/TASKS="desktopicon"]
+; Stilles Setup:  Music-Renamer-Setup-x.y.z.exe /VERYSILENT [/DIR="D:\Music Renamer"] [/TASKS="desktopicon,cli"]
 ;   [/RESTARTAPP=1 (Music Renamer nach dem Update wieder starten - so ruft es die Update-Funktion auf)]
 
 #ifndef AppVersion
@@ -32,6 +32,7 @@ UsePreviousTasks=yes
 DisableProgramGroupPage=yes
 DisableWelcomePage=no
 PrivilegesRequired=lowest
+ChangesEnvironment=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#DistDir}
@@ -68,6 +69,10 @@ de.DesktopIcon=Verknüpfung auf dem Desktop anlegen
 en.DesktopIcon=Create a desktop shortcut
 de.Shortcuts=Zusätzliche Verknüpfungen:
 en.Shortcuts=Additional shortcuts:
+de.Extras=Zusätzliche Funktionen:
+en.Extras=Additional features:
+de.CliTask=Befehlszeile hinzufügen (Befehl music-renamer-cli in jedem Terminal)
+en.CliTask=Add the command line (music-renamer-cli in any terminal)
 de.Uninstall=Music Renamer deinstallieren
 en.Uninstall=Uninstall Music Renamer
 de.LaunchNow=Music Renamer jetzt starten
@@ -85,10 +90,12 @@ en.DeleteData=Should settings, saved lookup results, reports and change logs be 
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:DesktopIcon}"; GroupDescription: "{cm:Shortcuts}"
+Name: "cli"; Description: "{cm:CliTask}"; GroupDescription: "{cm:Extras}"; Flags: unchecked
 
 [InstallDelete]
 ; Ein Update ersetzt die komplette Python-Laufzeit – alte Dateien nicht liegen lassen
 Type: filesandordirs; Name: "{app}\_internal"
+Type: filesandordirs; Name: "{app}\cli"
 ; Bis 0.5.0 hiess das Programm MP3 Organizer
 Type: files; Name: "{app}\MP3Organizer.exe"
 Type: filesandordirs; Name: "{autoprograms}\MP3 Organizer"
@@ -96,6 +103,7 @@ Type: files; Name: "{autodesktop}\MP3 Organizer.lnk"
 
 [Files]
 Source: "{#DistDir}\MusicRenamer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#DistDir}\music-renamer-cli\*"; DestDir: "{app}\cli"; Tasks: cli; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 
@@ -204,10 +212,43 @@ begin
   if WizardSilent() then
   begin
     Sleep(1500);
-    Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM MusicRenamer.exe /IM MP3Organizer.exe', '', SW_HIDE, ewWaitUntilTerminated, Code);
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM MusicRenamer.exe /IM MP3Organizer.exe /IM music-renamer-cli.exe', '', SW_HIDE, ewWaitUntilTerminated, Code);
     Sleep(500);
   end;
   Result := '';
+end;
+
+// Der Ordner der Befehlszeile im Pfad des Benutzers, dafür braucht es keine Adminrechte
+function WithoutFolder(Path, Folder: String): String;
+var
+  Wrapped: String;
+  At: Integer;
+begin
+  Wrapped := ';' + Path + ';';
+  At := Pos(';' + Lowercase(Folder) + ';', Lowercase(Wrapped));
+  if At > 0 then Delete(Wrapped, At, Length(Folder) + 1);
+  Result := Copy(Wrapped, 2, Length(Wrapped) - 2);
+end;
+
+procedure SetCliOnPath(Wanted: Boolean);
+var
+  Folder, Path, Changed: String;
+begin
+  Folder := ExpandConstant('{app}\cli');
+  Path := '';
+  RegQueryStringValue(HKCU, 'Environment', 'Path', Path);
+  Changed := WithoutFolder(Path, Folder);
+  if Wanted then
+  begin
+    if (Changed <> '') and (Changed[Length(Changed)] <> ';') then Changed := Changed + ';';
+    Changed := Changed + Folder;
+  end;
+  if Changed <> Path then RegWriteExpandStringValue(HKCU, 'Environment', 'Path', Changed);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then SetCliOnPath(WizardIsTaskSelected('cli'));
 end;
 
 function RestartAfterSilentUpdate(): Boolean;
@@ -240,6 +281,7 @@ end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
+  if CurUninstallStep = usUninstall then SetCliOnPath(False);
   if CurUninstallStep <> usPostUninstall then Exit;
   if DeleteData then
   begin

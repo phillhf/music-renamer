@@ -10,7 +10,7 @@ Unterstützt MP3, FLAC, M4A, MP4, OGG, Opus und WMA. Cover lassen sich in WMA ni
 
 | Anleitung | Inhalt |
 |---|---|
-| [Windows](docs/Windows.md) | Installation, Update, Standby, Deinstallation, Lösungen für Probleme |
+| [Windows](docs/Windows.md) | Installation, Befehlszeile, Update, Standby, Deinstallation, Lösungen für Probleme |
 | [macOS](docs/macOS.md) | Installation, erster Start trotz Warnung, Update, Deinstallation, Lösungen für Probleme |
 | [Linux](docs/Linux.md) | Pakete für Debian und Ubuntu, Update, Server, Deinstallation, Lösungen für Probleme |
 | [Bedienungsanleitung](docs/Bedienung.md) | alle Schritte und Optionen im Fenster, für alle Systeme gleich |
@@ -22,7 +22,7 @@ Unterstützt MP3, FLAC, M4A, MP4, OGG, Opus und WMA. Cover lassen sich in WMA ni
 
    | System | Datei |
    |---|---|
-   | Windows | `Music-Renamer-Setup-x.y.z.exe` |
+   | Windows, Befehlszeile als Option | `Music-Renamer-Setup-x.y.z.exe` |
    | Mac mit Apple-Chip | `Music-Renamer-x.y.z-macOS-arm64.dmg` |
    | Mac mit Intel | `Music-Renamer-x.y.z-macOS-intel.dmg` |
    | Debian, Ubuntu mit Fenster | `music-renamer_x.y.z_amd64.deb` oder `_arm64.deb` |
@@ -49,7 +49,7 @@ Die Oberfläche gibt es auf Deutsch und Englisch.
 
 ## Befehlszeile auf einen Blick
 
-Ohne `--apply` wird nur eine Vorschau geschrieben, mit `--apply` sofort und ohne Rückfrage ausgeführt. Der Befehl `music-renamer-cli` kommt aus dem gleichnamigen Linux-Paket, unter Windows und macOS läuft die Befehlszeile aus dem Quellcode. Beispiele und alle Details stehen in der [Befehlsreferenz](docs/Befehlszeile.md).
+Ohne `--apply` wird nur eine Vorschau geschrieben, mit `--apply` sofort und ohne Rückfrage ausgeführt. Der Befehl `music-renamer-cli` kommt unter Windows aus der Option **Befehlszeile hinzufügen** im Setup und unter Linux aus dem gleichnamigen Paket. Auf dem Mac läuft die Befehlszeile aus dem Quellcode. Beispiele und alle Details stehen in der [Befehlsreferenz](docs/Befehlszeile.md).
 
 ```bash
 music-renamer-cli dubletten ORDNER [--apply] [--klang] [--aehnlich] [--ziel ZIELORDNER]
@@ -95,7 +95,7 @@ powershell -ExecutionPolicy Bypass -File installer\build.ps1
 
 Auf einem Mac baut `bash installer/build_mac.sh` App und Disk-Image für den eigenen Prozessor, unter Debian oder Ubuntu `bash installer/build_deb.sh` die beiden Pakete.
 
-Für ein Release `__version__` in `musicrenamer/__init__.py` erhöhen, committen und einen passenden Tag pushen, zum Beispiel `v0.2.0`. GitHub Actions baut daraus den Installer und veröffentlicht ihn.
+Für ein Release `__version__` in `musicrenamer/__init__.py` erhöhen, committen und einen passenden Tag pushen, zum Beispiel `v0.2.0`. GitHub Actions baut daraus alle Pakete und veröffentlicht sie. Jedes Release muss die Fenster-Version für Windows, macOS und Linux sowie die Befehlszeile für Windows und Linux enthalten. Fehlt ein Paket, bricht `release.yml` vor dem Veröffentlichen ab.
 
 ## Lizenz
 

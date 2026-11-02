@@ -58,6 +58,37 @@ jobs:
         run: |
           $test = Start-Process dist\MusicRenamer\MusicRenamer.exe -ArgumentList "--selftest" -Wait -PassThru
           if ($test.ExitCode -ne 0) { throw "Selbsttest fehlgeschlagen: $($test.ExitCode)" }
+          dist\music-renamer-cli\music-renamer-cli.exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw "Selbsttest der Befehlszeile fehlgeschlagen: $LASTEXITCODE" }
+
+      - name: Befehlszeile im Setup prüfen
+        shell: pwsh
+        run: |
+          $setup = (Get-Item dist\Music-Renamer-Setup-*.exe).FullName
+          $folder = "C:\Tools\MusicRenamerTest"
+          $cli = "$folder\cli"
+          function Install($arguments) {
+            $run = Start-Process $setup -ArgumentList (@("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=$folder") + $arguments) -Wait -PassThru
+            if ($run.ExitCode -ne 0) { throw "Setup fehlgeschlagen: $($run.ExitCode)" }
+          }
+          function OnPath { [Environment]::GetEnvironmentVariable("Path", "User") -split ";" -contains $cli }
+
+          Install @()
+          if ((Test-Path $cli) -or (OnPath)) { throw "Befehlszeile ohne Auswahl installiert" }
+          Install @("/TASKS=cli")
+          if (-not (OnPath)) { throw "Befehlszeile fehlt im Pfad" }
+          & "$cli\music-renamer-cli.exe" --selftest
+          if ($LASTEXITCODE -ne 0) { throw "Installierte Befehlszeile fehlgeschlagen" }
+          # So ruft die Update-Funktion das Setup auf, die Auswahl muss bleiben
+          Install @()
+          if (-not (Test-Path "$cli\music-renamer-cli.exe") -or -not (OnPath)) { throw "Update hat die Befehlszeile entfernt" }
+          Install @("/MERGETASKS=!cli")
+          if ((Test-Path $cli) -or (OnPath)) { throw "Abwählen hat die Befehlszeile nicht entfernt" }
+          Install @("/TASKS=cli")
+
+          Start-Process "$folder\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES" -Wait
+          for ($i = 0; $i -lt 30 -and (Test-Path "$cli\music-renamer-cli.exe"); $i++) { Start-Sleep 1 }
+          if ((Test-Path "$cli\music-renamer-cli.exe") -or (OnPath)) { throw "Deinstallation unvollständig" }
 
       - name: Kopie unter altem Namen
         shell: pwsh
@@ -207,6 +238,15 @@ jobs:
       - name: Release veröffentlichen
         run: |
           rm -f assets/fenster*.png
+          # Jedes Release braucht alle Pakete: Fenster für alle drei Systeme, Befehlszeile für Windows
+          # (im Setup, oben geprüft) und Linux. Die Kopie unter altem Namen brauchen Updates bis 0.5.0.
+          version="${GITHUB_REF_NAME#v}"
+          for file in "Music-Renamer-Setup-$version.exe" "MP3-Organizer-Setup-$version.exe" \
+              "Music-Renamer-$version-macOS-arm64.dmg" "Music-Renamer-$version-macOS-intel.dmg" \
+              "music-renamer_${version}_amd64.deb" "music-renamer_${version}_arm64.deb" \
+              "music-renamer-cli_${version}_amd64.deb" "music-renamer-cli_${version}_arm64.deb"; do
+            test -f "assets/$file" || { echo "::error::Es fehlt $file"; exit 1; }
+          done
           gh release create "$GITHUB_REF_NAME" assets/* --repo "$GITHUB_REPOSITORY" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}

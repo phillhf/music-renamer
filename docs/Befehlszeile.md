@@ -23,10 +23,10 @@ Alle Befehle und Optionen von Music Renamer an einem Ort. Die Bedienung mit Fens
 | System | Aufruf | Einrichtung |
 |---|---|---|
 | Debian, Ubuntu | `music-renamer-cli` | Paket `music-renamer-cli`, siehe [Linux](Linux.md) |
-| Windows | `python -m musicrenamer` | nur aus dem Quellcode, siehe [Windows](Windows.md#befehlszeile-unter-windows) |
+| Windows | `music-renamer-cli` | Option **Befehlszeile hinzufügen** im Setup, siehe [Windows](Windows.md#befehlszeile-unter-windows) |
 | macOS | `python3 -m musicrenamer` | nur aus dem Quellcode, siehe [macOS](macOS.md#befehlszeile-auf-dem-mac) |
 
-Die fertigen Installer für Windows und macOS enthalten nur die Version mit Fenster. In dieser Anleitung steht überall `music-renamer-cli`. Unter Windows und macOS ersetzt du das durch den Aufruf aus der Tabelle, Optionen und Verhalten sind gleich.
+Das Image für macOS enthält nur die Version mit Fenster. In dieser Anleitung steht überall `music-renamer-cli`. Auf dem Mac ersetzt du das durch den Aufruf aus der Tabelle, Optionen und Verhalten sind gleich.
 
 Hilfe direkt im Terminal gibt es zu jedem Befehl:
 
@@ -263,7 +263,7 @@ Prüft, ob es auf GitHub eine neue Version gibt, und zeigt den Link. Installiert
 music-renamer-cli update
 ```
 
-Unter Linux installierst du das neue Paket wie in [Linux](Linux.md#update) beschrieben.
+Unter Windows bringt das Update der Fenster-Version oder das neue Setup auch die Befehlszeile mit, unter Linux installierst du das neue Paket wie in [Linux](Linux.md#update) beschrieben.
 
 ## Key und Token
 
@@ -284,14 +284,14 @@ export ACOUSTID_KEY="dein-key"
 export DISCOGS_TOKEN="dein-token"
 ```
 
-Windows PowerShell:
+Windows PowerShell, dauerhaft ab dem nächsten neuen Terminal:
 
 ```powershell
-$env:ACOUSTID_KEY = "dein-key"
+setx ACOUSTID_KEY "dein-key"
 ```
 
 ```powershell
-$env:DISCOGS_TOKEN = "dein-token"
+setx DISCOGS_TOKEN "dein-token"
 ```
 
 Ohne Key meldet das Programm „Ohne AcoustID-Key läuft die Suche nur über Name und Tags“. Alles andere funktioniert trotzdem.
@@ -402,4 +402,4 @@ Die Berichte sind CSV-Dateien mit Semikolon und lassen sich direkt in Excel oder
 | Dateien einzeln per Ziehen umbenennen | ja | nein, `umbenennen` arbeitet immer mit einem ganzen Ordner |
 | Sprache | Deutsch oder Englisch | Deutsch |
 | Key und Token | gespeichert in den Einstellungen | Umgebungsvariablen |
-| Update installieren | im Programm | von Hand |
+| Update installieren | im Programm | von Hand, unter Windows zusammen mit dem Fenster |
