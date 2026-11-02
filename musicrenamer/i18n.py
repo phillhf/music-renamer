@@ -7,6 +7,7 @@ FIELD_LABELS = {"artist": "Interpret", "title": "Titel", "album": "Album", "albu
 EN = {
     "Abbrechen": "Cancel",
     "Abbruch: {reason}. Bisherige Treffer sind gespeichert, einfach erneut starten.": "Stopped: {reason}. Results so far are saved, just start again.",
+    "Hilfe": "Help",
     "Installation fehlgeschlagen ({reason}). Von Hand: sudo apt install {path}": "Installation failed ({reason}). By hand: sudo apt install {path}",
     "Achtung: keine Verbindung zu {host}. Pausiert, es geht von selbst weiter, sobald sie wieder steht.": "Warning: no connection to {host}. Paused, it continues by itself once the connection is back.",
     "Aus früheren Läufen übernommen: {count} Titel.": "Taken from earlier runs: {count} tracks.",

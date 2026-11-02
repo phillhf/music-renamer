@@ -97,8 +97,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         settings = load_settings()
         i18n.language = settings.get("sprache", "de")
         self.title(f"Music Renamer {__version__}")
-        self.geometry("840x760")
-        self.minsize(740, 680)
+        self.geometry("920x760")
+        self.minsize(860, 680)
         icon = os.path.join(getattr(sys, "_MEIPASS", ""), "app.ico")
         if getattr(sys, "frozen", False) and os.path.exists(icon):
             self.iconbitmap(icon)
@@ -204,6 +204,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         ttk.Button(bottom, text=t("Berichte öffnen"), command=self._open_reports).pack(side="left", padx=6)
         self._button(bottom, t("Tag-Editor"), self._open_editor).pack(side="left")
         ttk.Button(bottom, text=t("Genre-Regeln"), command=self._open_rules).pack(side="left", padx=6)
+        ttk.Button(bottom, text=t("Hilfe"), command=lambda: webbrowser.open(cli.DOCS_URL + "Bedienung.md")).pack(
+            side="left", padx=(0, 6))
         self._button(bottom, t("Nach Updates suchen"),
                      lambda: self._run_background(self._check_update, quiet=False)).pack(side="left")
         language = ttk.Combobox(bottom, textvariable=self.language, values=list(i18n.LANGUAGES),

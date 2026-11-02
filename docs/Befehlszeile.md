@@ -28,7 +28,7 @@ Alle Befehle und Optionen von Music Renamer an einem Ort. Die Bedienung mit Fens
 
 Das Image für macOS enthält nur die Version mit Fenster. In dieser Anleitung steht überall `music-renamer-cli`. Auf dem Mac ersetzt du das durch den Aufruf aus der Tabelle, Optionen und Verhalten sind gleich.
 
-Hilfe direkt im Terminal gibt es zu jedem Befehl:
+Hilfe direkt im Terminal gibt es zu jedem Befehl, mit Beispielen und einem Link auf diese Anleitung:
 
 ```bash
 music-renamer-cli --help

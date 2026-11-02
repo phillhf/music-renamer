@@ -25,7 +25,7 @@ test -d "$HOME/.local/share/Music Renamer"
 apt-get install -y -qq /pakete/music-renamer_*"_$arch.deb" xvfb xauth imagemagick > /dev/null
 test -f /usr/share/applications/music-renamer.desktop
 xvfb-run -a music-renamer --selftest
-xvfb-run -a -s "-screen 0 900x800x24" sh -c '
+xvfb-run -a -s "-screen 0 1000x800x24" sh -c '
     music-renamer & pid=$!
     sleep 10
     import -window root "/pakete/fenster-linux-'"$arch"'.png"

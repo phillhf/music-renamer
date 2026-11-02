@@ -1,3 +1,4 @@
+import contextlib
 import io
 import os
 import random
@@ -17,6 +18,7 @@ from musicrenamer.dupes import find_duplicates
 from musicrenamer.names import parse_filename
 from musicrenamer.tags import write_tags
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HEADERS = {128: b"\xff\xfb\x90\x64", 320: b"\xff\xfb\xe0\x64"}
 FRAME_SIZES = {128: 417, 320: 1044}
 
@@ -364,6 +366,37 @@ class DataFolder(unittest.TestCase):
         os.makedirs(self.old)
         with mock.patch("os.rename", side_effect=PermissionError):
             self.assertEqual(cli.app_dir(self.base), self.old)
+
+
+class Help(unittest.TestCase):
+    def setUp(self):
+        patcher = mock.patch.object(cli.job, "listener")
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def help_text(self, *command):
+        with mock.patch.object(sys, "argv", ["music-renamer-cli", *command, "--help"]), \
+                contextlib.redirect_stdout(io.TextIOWrapper(io.BytesIO(), encoding="utf-8")) as output, \
+                self.assertRaises(SystemExit):
+            cli.main()
+        output.seek(0)
+        return output.read()
+
+    def test_overview_shows_examples_and_the_guide(self):
+        text = self.help_text()
+        self.assertIn("music-renamer-cli tags ~/Musik --cover --songtexte --apply", text)
+        self.assertIn('--muster "{artist}/{album}/{track} - {title}"', text)
+        self.assertIn(cli.DOCS_URL + "Befehlszeile.md", text)
+
+    def test_every_command_links_to_its_section(self):
+        guide = open(os.path.join(ROOT, "docs", "Befehlszeile.md"), encoding="utf-8").read()
+        for command in ("dubletten", "tags", "umbenennen", "undo", "update"):
+            self.assertIn(f"{cli.DOCS_URL}Befehlszeile.md#{command}", self.help_text(command))
+            self.assertIn(f"\n## {command}\n", guide)
+
+    def test_linked_guides_exist(self):
+        for name in ("Bedienung.md", "Befehlszeile.md"):
+            self.assertTrue(os.path.exists(os.path.join(ROOT, "docs", name)))
 
 
 class Updates(unittest.TestCase):

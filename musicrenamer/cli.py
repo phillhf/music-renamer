@@ -38,6 +38,21 @@ DB_PATH = os.path.join(DATA_DIR, "mp3org.sqlite")
 UNKNOWN_ALBUM = "Unbekanntes Album"
 MAX_FAILURES = 25
 PROGRESS_GAP = 30
+DOCS_URL = "https://github.com/phillhf/music-renamer/blob/main/docs/"
+HELP_EPILOG = f"""\
+Ohne --apply wird nichts geändert, nur ein Bericht geschrieben.
+Mit --apply wird sofort ausgeführt, ohne Rückfrage.
+
+Beispiele:
+  music-renamer-cli dubletten ~/Musik
+  music-renamer-cli tags ~/Musik --cover --songtexte
+  music-renamer-cli tags ~/Musik --cover --songtexte --apply
+  music-renamer-cli umbenennen ~/Musik --muster "{{artist}}/{{album}}/{{track}} - {{title}}"
+  music-renamer-cli undo
+
+Hilfe zu einem Befehl: music-renamer-cli tags --help
+Alle Befehle mit Beispielen: {DOCS_URL}Befehlszeile.md
+"""
 PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist}/{album}/{track} - {title}",
             "{albumartist}/{year} - {album}/{track} - {title}")
 
@@ -446,11 +461,14 @@ def console_progress():
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     job.listener = console_progress()
-    parser = argparse.ArgumentParser(prog="music-renamer-cli", description="Musiksammlung aufräumen")
+    keep_lines = argparse.RawDescriptionHelpFormatter  # sonst bricht argparse die Links um
+    parser = argparse.ArgumentParser(prog="music-renamer-cli", description="Musiksammlung aufräumen",
+                                     formatter_class=keep_lines, epilog=HELP_EPILOG)
     commands = parser.add_subparsers(dest="command", required=True)
 
     def command(name, handler, help_text):
-        sub = commands.add_parser(name, help=help_text)
+        sub = commands.add_parser(name, help=help_text, formatter_class=keep_lines,
+                                  epilog=f"Beispiele: {DOCS_URL}Befehlszeile.md#{name}")
         sub.add_argument("ordner", help="Ordner der Musiksammlung")
         sub.add_argument("--apply", action="store_true", help="Änderungen wirklich ausführen")
         sub.set_defaults(handler=handler)
@@ -471,9 +489,11 @@ def main():
     rename = command("umbenennen", cmd_rename, "Dateien nach Tags benennen")
     rename.add_argument("--muster", default=PATTERNS[0],
                         help=f'Standard "{PATTERNS[0]}"; / sortiert die Sammlung in Unterordner')
-    undo = commands.add_parser("undo", help="letzten ausgeführten Schritt zurücknehmen")
+    undo = commands.add_parser("undo", help="letzten ausgeführten Schritt zurücknehmen", formatter_class=keep_lines,
+                               epilog=f"Mehr dazu: {DOCS_URL}Befehlszeile.md#undo")
     undo.set_defaults(handler=cmd_undo)
-    update = commands.add_parser("update", help="auf GitHub nach einer neuen Version suchen")
+    update = commands.add_parser("update", help="auf GitHub nach einer neuen Version suchen", formatter_class=keep_lines,
+                                 epilog=f"Mehr dazu: {DOCS_URL}Befehlszeile.md#update")
     update.set_defaults(handler=cmd_update)
 
     args = parser.parse_args()

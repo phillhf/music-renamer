@@ -42,6 +42,7 @@ Das Programm löscht nie Musik. Dubletten werden nur verschoben.
 | **Berichte öffnen** | öffnet den Ordner mit den CSV-Berichten |
 | **Tag-Editor** | Tags von Hand ändern |
 | **Genre-Regeln** | eigene Genre-Zuordnungen bearbeiten |
+| **Hilfe** | öffnet diese Anleitung im Browser, auch während ein Schritt läuft |
 | **Nach Updates suchen** | prüft auf eine neue Version |
 | **Sprache** | Deutsch oder Englisch, gilt ab dem nächsten Start |
 
