@@ -98,7 +98,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         i18n.language = settings.get("sprache", "de")
         self.title(f"Music Renamer {__version__}")
         self.geometry("920x760")
-        self.minsize(860, 680)
+        self.minsize(900, 680)
         icon = os.path.join(getattr(sys, "_MEIPASS", ""), "app.ico")
         if getattr(sys, "frozen", False) and os.path.exists(icon):
             self.iconbitmap(icon)
