@@ -14,11 +14,11 @@ Es gibt zwei Pakete, die sich auch zusammen installieren lassen. Von der [Releas
 - `music-renamer-cli_x.y.z_amd64.deb`: nur die Befehlszeile, ohne Grafikbibliotheken, auch für Server
 
 ```bash
-sudo apt install ./music-renamer_0.10.0_amd64.deb
+sudo apt install ./music-renamer_0.10.1_amd64.deb
 ```
 
 ```bash
-sudo apt install ./music-renamer-cli_0.10.0_amd64.deb
+sudo apt install ./music-renamer-cli_0.10.1_amd64.deb
 ```
 
 Die Fenster-Version bietet neue Versionen beim Start an und installiert sie nach Eingabe des Passworts. Die Befehlszeile prüft das mit `music-renamer-cli update`, das neue Paket installiert man dort mit `apt` wie oben. Einstellungen und Berichte liegen in `~/.local/share/Music Renamer`. Zum Deinstallieren `sudo apt remove music-renamer music-renamer-cli`, die Daten bleiben dabei liegen.
