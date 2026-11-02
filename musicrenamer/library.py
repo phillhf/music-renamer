@@ -167,6 +167,7 @@ def scan(root, db, exclude=None, progress=print):
             continue
         read += 1
         if read % 500 == 0:
+            db.commit()  # Ein Abbruch soll nur die letzten Dateien kosten
             progress(f"  {read} Dateien gelesen ...")
         row = dict.fromkeys(READ_COLUMNS)
         error = None

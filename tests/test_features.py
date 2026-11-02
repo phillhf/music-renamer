@@ -1,10 +1,15 @@
 """Tests für Formate, Klangvergleich, Alben, Cover, Songtexte und Muster."""
+import contextlib
+import http.client
+import io
 import os
 import sqlite3
 import ssl
 import sys
 import tempfile
 import unittest
+import urllib.error
+import urllib.request
 from argparse import Namespace
 from unittest import mock
 
@@ -14,6 +19,7 @@ from test_musicrenamer import Base, make_mp3
 
 from musicrenamer import albums, cli, fingerprint, library, lookup, tags
 from musicrenamer.dupes import find_duplicates
+from musicrenamer.job import Cancelled, job
 
 JPEG = b"\xff\xd8\xff\xe0" + b"bild" * 50
 PNG = b"\x89PNG\r\n\x1a\n" + b"bild" * 50
@@ -247,13 +253,136 @@ class Extras(Base):
             self.assertEqual(lookup.fetch_cover("g"), JPEG)
 
     def test_failed_downloads_do_not_stop_the_run(self):
-        with mock.patch.object(lookup, "_fetch", side_effect=ConnectionError("weg")):
-            self.assertIsNone(lookup.fetch_cover("g"))
-            self.assertEqual(lookup.fetch_lyrics("A", "T", "B", 100), "")
+        make_mp3(self.path("a.mp3"), 1)
+        with mock.patch.object(lookup.Lookup, "find", self.fake_find), \
+                mock.patch.object(cli, "fetch_cover", side_effect=ConnectionError("weg")), \
+                mock.patch.object(cli, "fetch_lyrics", side_effect=ConnectionError("weg")):
+            cli.cmd_tag(self.arguments(cover=True, songtexte=True))
+        self.assertEqual(library.read_file(self.path("a.mp3"))["album"], "Album")
 
     def test_missing_lyrics_give_empty_text(self):
         with mock.patch.object(lookup, "_get", return_value=None):
             self.assertEqual(lookup.fetch_lyrics("A", "T", "B", 100), "")
+
+    def test_known_gaps_are_not_asked_again_but_outages_are(self):
+        make_mp3(self.path("a.mp3"), 1)
+        for answer, calls in ((ConnectionError("weg"), 1), (None, 2), (None, 2)):
+            with mock.patch.object(lookup.Lookup, "find", self.fake_find), \
+                    mock.patch.object(cli, "fetch_cover", side_effect=[answer]) as cover:
+                cli.cmd_tag(self.arguments(cover=True))
+            self.counted = getattr(self, "counted", 0) + cover.call_count
+            self.assertEqual(self.counted, calls)
+
+    def test_rejected_file_does_not_end_the_search(self):
+        make_mp3(self.path("a.mp3"), 1, tags={"artist": "A", "title": "1"})
+        make_mp3(self.path("b.mp3"), 2, tags={"artist": "A", "title": "2"})
+        rejected = urllib.error.HTTPError("u", 400, "Bad Request", None, None)
+        with mock.patch.object(lookup.Lookup, "find", side_effect=[rejected, self.fake_find("", "", "", 0)]):
+            cli.cmd_tag(self.arguments())
+        self.assertEqual(library.read_file(self.path("b.mp3"))["album"], "Album")
+        self.assertEqual(library.read_file(self.path("a.mp3"))["album"], "")
+
+    def test_many_rejections_in_a_row_end_the_search(self):
+        for number in range(cli.MAX_FAILURES):
+            make_mp3(self.path(f"{number}.mp3"), number, tags={"artist": "A", "title": str(number)})
+        rejected = urllib.error.HTTPError("u", 400, "Bad Request", None, None)
+        with mock.patch.object(lookup.Lookup, "find", side_effect=rejected), self.assertRaises(SystemExit):
+            cli.cmd_tag(self.arguments())
+
+
+class Connection(unittest.TestCase):
+    """Schlechtes Netz: der Lauf wartet und verliert nichts."""
+    URL = "https://musicbrainz.org/ws/2/x"
+    OPTIONAL = "https://lrclib.net/api/get"
+
+    def setUp(self):
+        lookup._last_call.clear()
+        lookup._skip_until.clear()
+        job.reset()
+        patcher = mock.patch.object(job, "wait")
+        self.wait = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def answers(self, *values):
+        return mock.patch.object(urllib.request, "urlopen", side_effect=values)
+
+    def test_waits_as_long_as_it_takes(self):
+        lost = urllib.error.URLError("weg")
+        with self.answers(*[lost] * 50, io.BytesIO(b"ok")), contextlib.redirect_stdout(io.StringIO()) as log:
+            self.assertEqual(lookup._fetch(self.URL, 0), b"ok")
+        self.assertIn("Pausiert", log.getvalue())
+        self.assertIn("wieder da", log.getvalue())
+        self.assertIn(mock.call(lookup.PAUSE_STEP), self.wait.call_args_list)
+
+    def test_broken_answers_count_as_outage(self):
+        broken = (http.client.RemoteDisconnected("weg"), http.client.IncompleteRead(b""),
+                  ConnectionResetError("weg"), TimeoutError("weg"))
+        with self.answers(*broken, io.BytesIO(b"{}")), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(lookup._get(self.URL, 0), {})
+
+    def test_wifi_login_page_is_no_answer(self):
+        with self.answers(io.BytesIO(b"<html>Anmelden</html>"), io.BytesIO(b'{"a": 1}')):
+            self.assertEqual(lookup._get(self.URL, 0), {"a": 1})
+
+    def test_short_dropout_stays_silent(self):
+        with self.answers(urllib.error.URLError("weg"), io.BytesIO(b"ok")), \
+                contextlib.redirect_stdout(io.StringIO()) as log:
+            lookup._fetch(self.URL, 0)
+        self.assertEqual(log.getvalue(), "")
+
+    def test_cancel_ends_the_pause(self):
+        self.wait.side_effect = Cancelled()
+        with self.answers(urllib.error.URLError("weg")), self.assertRaises(Cancelled):
+            lookup._fetch(self.URL, 0)
+
+    def test_cancel_interrupts_real_wait(self):
+        mock.patch.stopall()
+        job.cancel()
+        self.addCleanup(job.reset)
+        with self.assertRaises(Cancelled):
+            job.wait(60)
+
+    def test_lone_failing_extra_service_is_skipped_for_a_while(self):
+        lost = urllib.error.URLError("weg")
+        with self.answers(*[lost] * lookup.RETRIES) as fake, mock.patch.object(lookup, "_online", return_value=True), \
+                contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(ConnectionError):
+                lookup._fetch(self.OPTIONAL, 0, optional=True)
+            with self.assertRaises(ConnectionError):
+                lookup._fetch(self.OPTIONAL, 0, optional=True)
+        self.assertEqual(fake.call_count, lookup.RETRIES)
+
+    def test_extra_service_waits_when_whole_network_is_gone(self):
+        lost = urllib.error.URLError("weg")
+        with self.answers(*[lost] * 8, io.BytesIO(b"ok")), mock.patch.object(lookup, "_online", return_value=False), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(lookup._fetch(self.OPTIONAL, 0, optional=True), b"ok")
+
+    def test_refused_extra_service_gives_connection_error(self):
+        refused = urllib.error.HTTPError("u", 403, "Forbidden", None, None)
+        with self.answers(refused), self.assertRaises(ConnectionError):
+            lookup._fetch(self.OPTIONAL, 0, optional=True)
+
+    def test_network_probe(self):
+        with self.answers(io.BytesIO(b"{}")):
+            self.assertTrue(lookup._online())
+        with self.answers(urllib.error.URLError("weg")):
+            self.assertFalse(lookup._online())
+        with self.answers(io.BytesIO(b"<html>")):
+            self.assertFalse(lookup._online())
+
+    def test_outage_during_search_is_not_remembered_as_no_match(self):
+        db = sqlite3.connect(":memory:")
+        db.execute("CREATE TABLE lookups (key TEXT PRIMARY KEY, result TEXT)")
+        finder = lookup.Lookup(db)
+        with mock.patch.object(lookup, "_search_mb", side_effect=urllib.error.HTTPError("u", 400, "x", None, None)), \
+                self.assertRaises(urllib.error.HTTPError):
+            finder._by_name("A", "T", 100)
+        with mock.patch.object(lookup, "_search_mb", return_value=None):
+            self.assertEqual(finder._by_name("A", "T", 100), {})
+        self.assertEqual(finder.remembered, 0)
+        finder._by_name("A", "T", 100)
+        self.assertEqual(finder.remembered, 1)
 
 
 class Patterns(Base):

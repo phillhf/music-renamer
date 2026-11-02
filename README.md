@@ -58,6 +58,8 @@ Die Oberfläche gibt es auf Deutsch und Englisch, die Sprache gilt ab dem nächs
 
 MusicBrainz erlaubt eine Anfrage pro Sekunde, 10.000 Titel dauern also mehrere Stunden. Alle Treffer werden gespeichert: Ein abgebrochener Lauf setzt beim nächsten Start ohne Verlust fort, und „Ausführen“ nach der Vorschau geht schnell.
 
+Reißt die Verbindung ab, wiederholt das Programm die Anfrage und pausiert danach, auch über Tage. Das Fenster zeigt, seit wann, und der Lauf geht von selbst weiter, sobald die Verbindung wieder steht. Fällt nur ein Zusatzdienst für Cover, Songtexte, Genres oder Discogs aus, wird er 10 Minuten ausgelassen. Fehlende Cover und Songtexte holt ein erneuter Lauf nach.
+
 ## Dateien ohne brauchbaren Namen
 
 Dateien wie `track01.mp3` ohne Tags lassen sich nur am Klang erkennen. Dafür einen kostenlosen Key auf [acoustid.org](https://acoustid.org/new-application) anlegen (der Link „Key holen“ im Programm führt direkt dorthin) und im Feld „AcoustID-Key“ eintragen. Das nötige `fpcalc` ist im Installer enthalten.

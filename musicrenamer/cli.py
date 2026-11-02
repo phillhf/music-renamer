@@ -13,7 +13,7 @@ from .dupes import find_duplicates
 from .i18n import t
 from .job import Cancelled, job
 from .lookup import Lookup, fetch_cover, fetch_lyrics, find_fpcalc
-from .names import clean, identify, safe_filename
+from .names import clean, identify, normalize, safe_filename
 from .tags import FIELDS as TAG_FIELDS
 from .tags import write_tags
 
@@ -35,6 +35,7 @@ DATA_DIR = os.path.join(APP_DIR, "data")
 REPORT_DIR = os.path.join(APP_DIR, "berichte")
 DB_PATH = os.path.join(DATA_DIR, "mp3org.sqlite")
 UNKNOWN_ALBUM = "Unbekanntes Album"
+MAX_FAILURES = 25
 PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist}/{album}/{track} - {title}",
             "{albumartist}/{year} - {album}/{track} - {title}")
 
@@ -150,6 +151,7 @@ def _search(args, tracks, lookup, wants_genres):
 
     open_folders = {os.path.dirname(track.path) for track in tracks if not complete(track)}
     matches, unresolved = [], []
+    failures = 0
     for number, track in enumerate(tracks, 1):
         job.step(number, len(tracks), t("Metadaten suchen"))
         done = complete(track)
@@ -160,18 +162,38 @@ def _search(args, tracks, lookup, wants_genres):
         artist, title = identify(track)
         try:
             found = lookup.find(track.path, artist, title, track.duration)
-        except ConnectionError as exc:
-            sys.exit(t("Abbruch: {reason}. Bisherige Treffer sind gespeichert, einfach erneut starten.", reason=exc))
+            failures = 0
+        except Exception as exc:  # Eine Datei, die der Dienst ablehnt, darf den Lauf nicht beenden
+            failures += 1
+            if failures >= MAX_FAILURES:  # So oft in Folge liegt es nicht an der Datei, sondern z. B. am Key
+                sys.exit(t("Abbruch: {reason}. Bisherige Treffer sind gespeichert, einfach erneut starten.", reason=exc))
+            print(t("Fehler bei {path}: {reason}", path=track.path, reason=exc))
+            found = None
         if found and not found.get("rejected"):
             matches.append((track, found))
         elif done and wants_genres:
             matches.append((track, {"source": "genre"}))
         elif not done:
             unresolved.append((track.path, artist, title, (found or {}).get("score", "")))
+    if lookup.remembered:
+        print(t("Aus früheren Läufen übernommen: {count} Titel.", count=lookup.remembered))
     return matches, unresolved
 
 
-def _apply_tags(chosen, plan):
+def _fetch_once(cache, key, fetch):
+    """Fragt nicht neu nach, was ein Dienst sicher nicht hat; ein Ausfall zählt nicht dazu."""
+    if cache.get(key):
+        return None
+    try:
+        value = fetch()
+    except ConnectionError:
+        return None
+    if not value:
+        cache.set(key, True)
+    return value
+
+
+def _apply_tags(chosen, plan, cache):
     journal = journaling.Journal(DATA_DIR, "tags")
     covers = {}
     saved = covers_saved = lyrics_saved = 0
@@ -183,13 +205,17 @@ def _apply_tags(chosen, plan):
             try:
                 if row["Cover"]:
                     if found["group"] not in covers:
-                        covers[found["group"]] = fetch_cover(found["group"])
+                        # Nur das aktuelle Album behalten, bei 70.000 Titeln wäre der Speicher sonst voll
+                        covers = {found["group"]: _fetch_once(cache, f"no-cover:{found['group']}",
+                                                              lambda: fetch_cover(found["group"]))}
                     if covers[found["group"]]:
                         changes["cover"] = covers[found["group"]]
                 if row["Songtext"]:
-                    text = fetch_lyrics(changes.get("artist") or found.get("artist", clean(track.artist)),
-                                        changes.get("title") or found.get("title", clean(track.title)),
-                                        changes.get("album") or found.get("album", ""), track.duration)
+                    artist = changes.get("artist") or found.get("artist", clean(track.artist))
+                    title = changes.get("title") or found.get("title", clean(track.title))
+                    album = changes.get("album") or found.get("album", "")
+                    text = _fetch_once(cache, f"no-lyrics:{normalize(artist)}|{normalize(title)}",
+                                       lambda: fetch_lyrics(artist, title, album, track.duration))
                     if text:
                         changes["lyrics"] = text
                 if not changes:
@@ -256,7 +282,7 @@ def cmd_tag(args):
     if not chosen:
         print(t("Keine Änderungen nötig."))
         return
-    _apply_tags(chosen, plan)
+    _apply_tags(chosen, plan, lookup.cache)
 
 
 def check_pattern(pattern):

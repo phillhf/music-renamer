@@ -1,8 +1,10 @@
 """Metadaten aus MusicBrainz, ergänzt um iTunes (Genre) und optional AcoustID.
 
 MusicBrainz erlaubt eine Anfrage pro Sekunde; jede Antwort landet im Cache,
-sodass ein abgebrochener Lauf ohne Verlust weiterläuft.
+sodass ein abgebrochener Lauf ohne Verlust weiterläuft. Reißt die Verbindung ab,
+pausiert der Lauf und macht von selbst weiter, sobald sie wieder steht.
 """
+import http.client
 import json
 import os
 import re
@@ -16,6 +18,8 @@ import urllib.request
 from difflib import SequenceMatcher
 
 from . import __version__
+from .i18n import format_duration, t
+from .job import job
 from .library import audio_key
 from .names import normalize
 from .system import SSL_CONTEXT
@@ -26,6 +30,10 @@ MIN_SIMILARITY = 0.85
 MAX_DURATION_DIFF = 8.0
 MAX_RECORDINGS = 5
 MAX_RELEASES = 40
+RETRIES = 4
+RETRY_CODES = (429, 500, 502, 503, 504)
+PAUSE_STEP = 30
+SKIP_SECONDS = 600
 # Mindestwert der Klangerkennung je Stufe
 LEVELS = {"streng": 0.95, "normal": 0.85, "locker": 0.70}
 
@@ -46,11 +54,38 @@ def parse_accuracy(value):
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _last_call = {}
+_skip_until = {}
 
 
-def _fetch(url, min_interval, data=None, headers=None):
+def _online():
+    """Prüft an MusicBrainz, ob nur ein Zusatzdienst ausfällt oder das ganze Netz."""
+    request = urllib.request.Request(f"{MB_URL}/genre/all?limit=1&fmt=json", headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=15, context=SSL_CONTEXT) as response:
+            json.loads(response.read())  # Eine WLAN-Anmeldeseite ist keine Verbindung
+        return True
+    except urllib.error.HTTPError:
+        return True
+    except (OSError, http.client.HTTPException, ValueError):
+        return False
+
+
+def _report_back(host, paused):
+    if paused:
+        print(t("Verbindung zu {host} wieder da nach {time}, es geht weiter.", host=host, time=format_duration(time.monotonic() - paused)))
+
+
+def _fetch(url, min_interval, data=None, headers=None, check=None, optional=False):
+    """Holt eine Antwort und wartet Ausfälle ab, ohne Begrenzung und bis zum Abbrechen.
+
+    Ein optionaler Dienst hält den Lauf nur auf, wenn das ganze Netz weg ist; fällt er
+    allein aus, gibt es ConnectionError und er wird eine Weile nicht mehr gefragt.
+    """
     host = urllib.parse.urlparse(url).netloc
-    for attempt in range(4):
+    if optional and time.monotonic() < _skip_until.get(host, 0):
+        raise ConnectionError(f"Keine Antwort von {host}")
+    failures, paused = 0, None
+    while True:
         wait = _last_call.get(host, 0) + min_interval - time.monotonic()
         if wait > 0:
             time.sleep(wait)
@@ -58,40 +93,53 @@ def _fetch(url, min_interval, data=None, headers=None):
         request = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT, **(headers or {})})
         try:
             with urllib.request.urlopen(request, timeout=30, context=SSL_CONTEXT) as response:
-                return response.read()
+                content = response.read()
+            if check:
+                check(content)
+            _report_back(host, paused)
+            return content
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
+                _report_back(host, paused)
                 return None
-            if exc.code not in (429, 500, 502, 503, 504):
+            if exc.code not in RETRY_CODES:
+                if optional:
+                    raise ConnectionError(f"{host}: {exc}") from exc
                 raise
-        except (urllib.error.URLError, TimeoutError):
+        # Abgerissene Antworten kommen nicht als URLError, eine WLAN-Anmeldeseite als gültige Antwort
+        except (OSError, http.client.HTTPException, ValueError):
             pass
-        time.sleep(2 ** (attempt + 1))
-    raise ConnectionError(f"Keine Antwort von {host}")
+        failures += 1
+        if failures < RETRIES:
+            job.wait(2 ** failures)
+            continue
+        if optional and not paused and _online():
+            _skip_until[host] = time.monotonic() + SKIP_SECONDS
+            print(t("{host} antwortet nicht und wird 10 Minuten ausgelassen. Fehlende Cover und Songtexte holt ein erneuter Lauf nach.", host=host))
+            raise ConnectionError(f"Keine Antwort von {host}")
+        if not paused:
+            paused = time.monotonic()
+            print(t("Achtung: keine Verbindung zu {host}. Pausiert, es geht von selbst weiter, sobald sie wieder steht.", host=host))
+        job.notice(t("Pausiert, keine Verbindung zu {host} seit {time}", host=host, time=format_duration(time.monotonic() - paused)))
+        job.wait(PAUSE_STEP)
 
 
-def _get(url, min_interval, data=None):
-    content = _fetch(url, min_interval, data)
+def _get(url, min_interval, data=None, optional=False):
+    content = _fetch(url, min_interval, data, check=json.loads, optional=optional)
     return json.loads(content) if content else None
 
 
 def fetch_cover(group_id):
-    """Vorderes Cover eines Albums von der Cover Art Archive oder None."""
-    try:
-        image = _fetch(f"https://coverartarchive.org/release-group/{group_id}/front-500", 0.5)
-    except ConnectionError:
-        return None  # ein fehlendes Cover soll den Lauf nicht aufhalten
+    """Vorderes Cover eines Albums von der Cover Art Archive oder None, ConnectionError bei Ausfall."""
+    image = _fetch(f"https://coverartarchive.org/release-group/{group_id}/front-500", 0.5, optional=True)
     return image if image and image[:3] in (b"\xff\xd8\xff", b"\x89PN") else None
 
 
 def fetch_lyrics(artist, title, album, duration):
-    """Songtext von LRCLIB oder ein leerer Text."""
+    """Songtext von LRCLIB oder ein leerer Text, ConnectionError bei Ausfall."""
     params = urllib.parse.urlencode({"artist_name": artist, "track_name": title, "album_name": album,
                                      "duration": round(duration or 0)})
-    try:
-        data = _get(f"https://lrclib.net/api/get?{params}", 0.3) or {}
-    except ConnectionError:
-        return ""
+    data = _get(f"https://lrclib.net/api/get?{params}", 0.3, optional=True) or {}
     return (data.get("plainLyrics") or "").strip()
 
 
@@ -207,7 +255,7 @@ def _artist_genre(artist_id, cache):
 def _itunes(artist, title):
     params = urllib.parse.urlencode({"term": f"{artist} {title}", "media": "music",
                                      "entity": "song", "limit": 5, "country": "DE"})
-    data = _get(f"https://itunes.apple.com/search?{params}", 3.2) or {}
+    data = _get(f"https://itunes.apple.com/search?{params}", 3.2, optional=True) or {}
     for item in data.get("results", []):
         if _similar(item.get("artistName", ""), artist) >= MIN_SIMILARITY \
                 and _similar(item.get("trackName", ""), title) >= MIN_SIMILARITY:
@@ -218,11 +266,8 @@ def _itunes(artist, title):
 def _discogs(artist, title, token):
     """Zweite Quelle für das, was MusicBrainz nicht kennt."""
     params = urllib.parse.urlencode({"artist": artist, "track": title, "type": "release", "per_page": 10})
-    try:
-        content = _fetch(f"https://api.discogs.com/database/search?{params}", 1.1,
-                         headers={"Authorization": f"Discogs token={token}"})
-    except urllib.error.HTTPError:
-        return None  # z. B. ein ungültiges Token
+    content = _fetch(f"https://api.discogs.com/database/search?{params}", 1.1,
+                     headers={"Authorization": f"Discogs token={token}"}, optional=True)
     for item in json.loads(content or "{}").get("results", []):
         found_artist, separator, album = item.get("title", "").partition(" - ")
         # Discogs hängt bei gleichnamigen Künstlern eine Nummer an: "Nirvana (2)"
@@ -286,6 +331,7 @@ class Lookup:
         self.fpcalc = find_fpcalc() if self.api_key else None
         self.discogs_token = os.environ.get("DISCOGS_TOKEN", "")
         self.min_score = parse_accuracy(level)
+        self.remembered = 0
 
     def find(self, path, artist, title, duration):
         """Liefert die Metadaten, ein Dict mit "rejected" oder None, wenn nichts passt."""
@@ -304,7 +350,10 @@ class Lookup:
         key = f"discogs:{normalize(artist)}|{normalize(title)}"
         cached = self.cache.get(key)
         if cached is None:
-            cached = _discogs(artist, title, self.discogs_token) or {}
+            try:
+                cached = _discogs(artist, title, self.discogs_token) or {}
+            except ConnectionError:  # Zum Beispiel ein ungültiges Token
+                return None
             self.cache.set(key, cached)
         return cached or None
 
@@ -314,6 +363,7 @@ class Lookup:
         key = f"song:{normalize(artist)}|{normalize(title)}|{round((duration or 0) / 10)}"
         cached = self.cache.get(key)
         if cached is not None:
+            self.remembered += 1
             return cached
         found = _search_mb(artist, title, duration) or _search_mb(title, artist, duration)
         result = self._details(found[1], "musicbrainz", found[0]) if found else {}
@@ -341,7 +391,10 @@ class Lookup:
         if not result["genre"]:
             result["genre"] = _artist_genre(artist_id, self.cache)
         if not result["genre"] or not result["year"]:
-            item = _itunes(result["artist"], result["title"])
+            try:
+                item = _itunes(result["artist"], result["title"])
+            except ConnectionError:
+                item = None
             if item:
                 result["genre"] = result["genre"] or item.get("primaryGenreName", "")
                 result["year"] = result["year"] or item.get("releaseDate", "")[:4]

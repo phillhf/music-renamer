@@ -7,6 +7,11 @@ FIELD_LABELS = {"artist": "Interpret", "title": "Titel", "album": "Album", "albu
 EN = {
     "Abbrechen": "Cancel",
     "Abbruch: {reason}. Bisherige Treffer sind gespeichert, einfach erneut starten.": "Stopped: {reason}. Results so far are saved, just start again.",
+    "Achtung: keine Verbindung zu {host}. Pausiert, es geht von selbst weiter, sobald sie wieder steht.": "Warning: no connection to {host}. Paused, it continues by itself once the connection is back.",
+    "Aus früheren Läufen übernommen: {count} Titel.": "Taken from earlier runs: {count} tracks.",
+    "Pausiert, keine Verbindung zu {host} seit {time}": "Paused, no connection to {host} for {time}",
+    "Verbindung zu {host} wieder da nach {time}, es geht weiter.": "Connection to {host} is back after {time}, continuing.",
+    "{host} antwortet nicht und wird 10 Minuten ausgelassen. Fehlende Cover und Songtexte holt ein erneuter Lauf nach.": "{host} is not responding and is skipped for 10 minutes. Running again fetches missing covers and lyrics.",
     "Abgebrochen. Bereits Erledigtes bleibt erhalten und lässt sich im Verlauf zurücknehmen.": "Cancelled. Completed work is kept and can be undone in the history.",
     "AcoustID-Key:": "AcoustID key:",
     "Album": "Album",
