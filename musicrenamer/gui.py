@@ -9,7 +9,8 @@ import threading
 import tkinter as tk
 import webbrowser
 from argparse import Namespace
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, font, messagebox, ttk
+from types import SimpleNamespace
 
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
@@ -22,6 +23,10 @@ from .review import ReviewWindow
 
 SETTINGS_PATH = os.path.join(cli.APP_DIR, "einstellungen.json")
 ACOUSTID_KEY_URL = "https://acoustid.org/new-application"
+STEPS = ("dubletten", "tags", "umbenennen")
+QUICK = "schnell"
+STEP_NAMES = {"dubletten": "Dubletten aussortieren", "tags": "Metadaten ergänzen",
+              "umbenennen": "Umbenennen und sortieren"}
 
 
 def level_label(level):
@@ -97,8 +102,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         settings = load_settings()
         i18n.language = settings.get("sprache", "de")
         self.title(f"Music Renamer {__version__}")
-        self.geometry("920x760")
-        self.minsize(900, 680)
+        self.geometry("980x700")
+        self.minsize(920, 640)
         icon = os.path.join(getattr(sys, "_MEIPASS", ""), "app.ico")
         if getattr(sys, "frozen", False) and os.path.exists(icon):
             self.iconbitmap(icon)
@@ -121,96 +126,79 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.period_years = tk.StringVar(value=str(settings.get("zeitraum_jahre", cli.PERIOD_YEARS)))
         self.language = tk.StringVar(value=next(k for k, v in i18n.LANGUAGES.items() if v == i18n.language))
         self.progress_text = tk.StringVar()
+        self.status = settings.get("status", {})
+        self.running_step = None
+        self.review_cancelled = False
         self._build()
+        self.folder.trace_add("write", self._refresh_nav)
         self._enable_drop()
         job.listener = lambda *values: self.events.put(("progress", values))
-        self.after(100, self._drain_events)
+        self.drain_id = self.after(100, self._drain_events)
         if auto_update_check:
             self._run_background(self._check_update, quiet=True)
 
     def _build(self):
+        style = ttk.Style(self)
+        style.configure("Nav.Toolbutton", anchor="w", padding=(10, 8))
+        style.configure("Info.TLabel", foreground="#4a4a4a")
+        base = font.nametofont("TkDefaultFont")
+        self.title_font = base.copy()
+        self.title_font.configure(size=round(base.actual("size") * 1.35), weight="bold")
+
         main = ttk.Frame(self, padding=12)
         main.pack(fill="both", expand=True)
-        main.columnconfigure(1, weight=1)
-        main.rowconfigure(7, weight=1)
+        main.columnconfigure(0, weight=1)
+        main.rowconfigure(3, weight=1)
 
-        ttk.Label(main, text=t("Sammlung:")).grid(row=0, column=0, sticky="w")
-        ttk.Entry(main, textvariable=self.folder).grid(row=0, column=1, sticky="ew", padx=6)
-        ttk.Button(main, text=t("Auswählen ..."), command=self._choose).grid(row=0, column=2, sticky="ew")
+        top = ttk.Frame(main)
+        top.grid(row=0, column=0, sticky="ew")
+        ttk.Label(top, text=t("Sammlung:")).pack(side="left")
+        ttk.Entry(top, textvariable=self.folder).pack(side="left", fill="x", expand=True, padx=6)
+        ttk.Button(top, text=t("Auswählen ..."), command=self._choose).pack(side="left")
+        ttk.Separator(main).grid(row=1, column=0, sticky="ew", pady=10)
 
-        self._step(main, 1, t("1. Dubletten verschieben"), self._dupes)
-        dupes = ttk.Frame(main)
-        dupes.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 6))
-        ttk.Checkbutton(dupes, text=t("Am Klang vergleichen (findet auch andere Bitraten und Formate, langsamer)"),
-                        variable=self.sound).pack(anchor="w")
-        ttk.Checkbutton(dupes, text=t("Auch ähnliche Dubletten (gleicher Titel, andere Datei)"),
-                        variable=self.similar).pack(anchor="w")
-        self._step(main, 3, t("2. Metadaten ergänzen"), self._tags)
-        options = ttk.Frame(main)
-        options.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 6))
-        ttk.Checkbutton(options, text=t("Vorhandene Tags ersetzen statt nur leere Felder füllen"),
-                        variable=self.overwrite).pack(anchor="w")
-        extras = ttk.Frame(options)
-        extras.pack(anchor="w")
-        ttk.Checkbutton(extras, text=t("Fehlende Cover einbetten"), variable=self.cover).pack(side="left")
-        ttk.Checkbutton(extras, text=t("Fehlende Songtexte einbetten"), variable=self.lyrics).pack(
-            side="left", padx=(12, 0))
-        ttk.Checkbutton(extras, text=t("Genres vereinheitlichen"), variable=self.unify_genres).pack(
-            side="left", padx=(12, 0))
-        accuracy = ttk.Frame(options)
-        accuracy.pack(anchor="w", pady=(4, 0))
-        ttk.Label(accuracy, text=t("Genauigkeit Klangerkennung:")).pack(side="left", padx=(0, 4))
-        self.level_box = ttk.Combobox(accuracy, textvariable=self.accuracy, values=list(LEVEL_LABELS),
-                                      state="readonly", width=14)
-        self.level_box.pack(side="left")
-        ttk.Label(accuracy, text=t("oder eigener Wert:")).pack(side="left", padx=(12, 4))
-        ttk.Entry(accuracy, textvariable=self.custom_accuracy, width=6).pack(side="left")
-        ttk.Label(accuracy, text="%").pack(side="left", padx=(2, 0))
-        self.custom_accuracy.trace_add("write", self._update_level_box)
-        self._update_level_box()
-        key_row = ttk.Frame(options)
-        key_row.pack(anchor="w", pady=(4, 0))
-        ttk.Label(key_row, text=t("AcoustID-Key:")).pack(side="left", padx=(0, 4))
-        ttk.Entry(key_row, textvariable=self.acoustid_key, width=18, show="*").pack(side="left")
-        link = tk.Label(key_row, text=t("Key holen"), fg="#0a58ca", cursor="hand2",
-                        font=("Segoe UI", 9, "underline"))
-        link.pack(side="left", padx=(6, 0))
-        link.bind("<Button-1>", lambda event: webbrowser.open(ACOUSTID_KEY_URL))
-        ttk.Label(key_row, text=t("Discogs-Token:")).pack(side="left", padx=(14, 4))
-        ttk.Entry(key_row, textvariable=self.discogs_token, width=18, show="*").pack(side="left")
-        self._step(main, 5, t("3. Dateien umbenennen und sortieren"), self._rename)
-        section = ttk.Frame(main)
-        section.grid(row=6, column=0, columnspan=3, sticky="ew")
-        rename = ttk.Frame(section)
-        rename.pack(fill="x")
-        ttk.Label(rename, text=t("Muster:")).pack(side="left", padx=(0, 4))
-        ttk.Combobox(rename, textvariable=self.pattern, values=cli.PATTERNS).pack(side="left", fill="x", expand=True)
-        ttk.Label(rename, text=t("Jahre je {zeitraum}:")).pack(side="left", padx=(12, 4))
-        ttk.Spinbox(rename, textvariable=self.period_years, from_=1, to=100, width=4).pack(side="left")
-        target = ttk.Frame(section)
-        target.pack(fill="x", pady=(4, 0))
-        ttk.Label(target, text=t("Zielordner:")).pack(side="left", padx=(0, 4))
-        ttk.Entry(target, textvariable=self.target_folder).pack(side="left", fill="x", expand=True)
-        ttk.Button(target, text=t("Auswählen ..."), command=self._choose_target).pack(side="left", padx=(6, 0))
-        ttk.Label(section, text=t("Leer: alles bleibt in der Sammlung. Sonst wandern alle Dateien mit Interpret und Titel dorthin.")).pack(
-            anchor="w", pady=(2, 0))
-        self.drop_zone = ttk.Label(section, text=t("Audiodateien oder Ordner hier ablegen, um sie direkt umzubenennen"),
-                                   anchor="center", relief="groove", padding=8)
-        self.drop_zone.pack(fill="x", pady=(6, 0))
+        body = ttk.Frame(main)
+        body.grid(row=2, column=0, sticky="nsew")
+        body.columnconfigure(2, weight=1)
+        nav = ttk.Frame(body)
+        nav.grid(row=0, column=0, sticky="ns")
+        ttk.Separator(body, orient="vertical").grid(row=0, column=1, sticky="ns", padx=(10, 0))
+        self.content = ttk.Frame(body)
+        self.content.grid(row=0, column=2, sticky="nsew")
+        self.content.columnconfigure(0, weight=1)
+        self.page = tk.StringVar(value=STEPS[0])
+        self.nav_texts = {key: tk.StringVar() for key in (*STEPS, QUICK)}
+        for key in (*STEPS, QUICK):
+            if key == QUICK:
+                ttk.Separator(nav).pack(fill="x", pady=8)
+            ttk.Radiobutton(nav, textvariable=self.nav_texts[key], variable=self.page, value=key,
+                            style="Nav.Toolbutton", width=30, command=self._show_page).pack(fill="x", pady=1)
+        self.pages = {}
+        self._build_dupes()
+        self._build_tags()
+        self._build_rename()
+        self._build_quick()
+        self._refresh_nav()
+        self._show_page()
 
-        self.log = tk.Text(main, height=6, state="disabled", wrap="word")
-        self.log.grid(row=7, column=0, columnspan=3, sticky="nsew", pady=8)
+        log = ttk.Frame(main)
+        log.grid(row=3, column=0, sticky="nsew", pady=(12, 0))
+        log.columnconfigure(0, weight=1)
+        log.rowconfigure(1, weight=1)
+        ttk.Label(log, text=t("Protokoll")).grid(row=0, column=0, sticky="w")
+        self.log = tk.Text(log, height=5, state="disabled", wrap="word")
+        self.log.grid(row=1, column=0, sticky="nsew", pady=(2, 0))
 
         progress = ttk.Frame(main)
-        progress.grid(row=8, column=0, columnspan=3, sticky="ew", pady=(0, 8))
+        progress.grid(row=4, column=0, sticky="ew", pady=(8, 0))
         self.progress = ttk.Progressbar(progress, maximum=100)
         self.progress.pack(side="left", fill="x", expand=True)
         self.cancel_button = ttk.Button(progress, text=t("Abbrechen"), command=job.cancel, state="disabled")
         self.cancel_button.pack(side="left", padx=(6, 0))
-        ttk.Label(main, textvariable=self.progress_text).grid(row=9, column=0, columnspan=3, sticky="w", pady=(0, 6))
+        ttk.Label(main, textvariable=self.progress_text).grid(row=5, column=0, sticky="w", pady=(2, 6))
 
         bottom = ttk.Frame(main)
-        bottom.grid(row=10, column=0, columnspan=3, sticky="ew")
+        bottom.grid(row=6, column=0, sticky="ew")
         self._button(bottom, t("Verlauf"), lambda: HistoryWindow(self)).pack(side="left")
         ttk.Button(bottom, text=t("Berichte öffnen"), command=self._open_reports).pack(side="left", padx=6)
         self._button(bottom, t("Tag-Editor"), self._open_editor).pack(side="left")
@@ -224,6 +212,155 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         language.pack(side="right")
         language.bind("<<ComboboxSelected>>", self._language_changed)
         ttk.Label(bottom, text=t("Sprache:")).pack(side="right", padx=(0, 4))
+
+    def _page(self, key, title, info):
+        """Eine Seite pro Schritt: Überschrift, ein Satz, was er tut, darunter nur seine Optionen."""
+        page = ttk.Frame(self.content, padding=(16, 0, 0, 0))
+        page.grid(row=0, column=0, sticky="nsew")
+        ttk.Label(page, text=title, font=self.title_font).pack(anchor="w")
+        text = ttk.Label(page, text=info, style="Info.TLabel", justify="left", wraplength=560)
+        text.pack(anchor="w", fill="x", pady=(4, 10))
+        text.bind("<Configure>", lambda event: event.widget.configure(wraplength=max(event.width - 12, 200)))
+        self.pages[key] = page
+        return page
+
+    def _actions(self, page, action, next_step=None):
+        row = ttk.Frame(page)
+        row.pack(fill="x", pady=(14, 0))
+        self._button(row, t("1. Vorschau ansehen"), lambda: action(False)).pack(side="left")
+        self._button(row, t("2. Prüfen und ausführen"), lambda: action(True)).pack(side="left", padx=(6, 0))
+        if next_step:
+            ttk.Button(row, text=t("Weiter zu Schritt {number} →", number=STEPS.index(next_step) + 1),
+                       command=lambda: self._go(next_step)).pack(side="right")
+
+    def _build_dupes(self):
+        page = self._page("dubletten", t("Schritt 1: Dubletten aussortieren"),
+                          t("Findet doppelte Dateien und verschiebt sie in den Ordner „Dubletten“ in deiner Sammlung. Behalten wird jeweils die beste Datei. Gelöscht wird nichts, alles lässt sich im Verlauf zurücknehmen."))
+        ttk.Checkbutton(page, text=t("Am Klang vergleichen (findet auch andere Bitraten und Formate, langsamer)"),
+                        variable=self.sound).pack(anchor="w", pady=2)
+        ttk.Checkbutton(page, text=t("Auch ähnliche Dubletten (gleicher Titel, andere Datei)"),
+                        variable=self.similar).pack(anchor="w", pady=2)
+        self._actions(page, self._dupes, "tags")
+
+    def _build_tags(self):
+        page = self._page("tags", t("Schritt 2: Metadaten ergänzen"),
+                          t("Sucht online Interpret, Album, Jahr, Genre und Tracknummer und schreibt sie in die Dateien, auf Wunsch auch Cover und Songtexte. Bei großen Sammlungen dauert das Tage. Du kannst jederzeit abbrechen oder das Programm schließen, beim nächsten Start geht es dort weiter."))
+        for text, variable in ((t("Fehlende Cover einbetten"), self.cover),
+                               (t("Fehlende Songtexte einbetten"), self.lyrics),
+                               (t("Genres vereinheitlichen (zum Beispiel Rap zu Hip-Hop)"), self.unify_genres),
+                               (t("Vorhandene Tags ersetzen statt nur leere Felder füllen"), self.overwrite)):
+            ttk.Checkbutton(page, text=text, variable=variable).pack(anchor="w", pady=2)
+
+        toggle = ttk.Button(page, style="Toolbutton")
+        toggle.pack(anchor="w", pady=(8, 0))
+        advanced = ttk.Frame(page, padding=(18, 4, 0, 0))
+        accuracy = ttk.Frame(advanced)
+        accuracy.pack(anchor="w")
+        ttk.Label(accuracy, text=t("Genauigkeit Klangerkennung:")).pack(side="left", padx=(0, 4))
+        self.level_box = ttk.Combobox(accuracy, textvariable=self.accuracy, values=list(LEVEL_LABELS),
+                                      state="readonly", width=14)
+        self.level_box.pack(side="left")
+        ttk.Label(accuracy, text=t("oder eigener Wert:")).pack(side="left", padx=(12, 4))
+        ttk.Entry(accuracy, textvariable=self.custom_accuracy, width=6).pack(side="left")
+        ttk.Label(accuracy, text="%").pack(side="left", padx=(2, 0))
+        self.custom_accuracy.trace_add("write", self._update_level_box)
+        self._update_level_box()
+        key_row = ttk.Frame(advanced)
+        key_row.pack(anchor="w", pady=(6, 0))
+        ttk.Label(key_row, text=t("AcoustID-Key:")).pack(side="left", padx=(0, 4))
+        ttk.Entry(key_row, textvariable=self.acoustid_key, width=18, show="*").pack(side="left")
+        link = tk.Label(key_row, text=t("Key holen"), fg="#0a58ca", cursor="hand2",
+                        font=("Segoe UI", 9, "underline"))
+        link.pack(side="left", padx=(6, 0))
+        link.bind("<Button-1>", lambda event: webbrowser.open(ACOUSTID_KEY_URL))
+        ttk.Label(key_row, text=t("Discogs-Token:")).pack(side="left", padx=(14, 4))
+        ttk.Entry(key_row, textvariable=self.discogs_token, width=18, show="*").pack(side="left")
+
+        label = t("Erweitert: Klangerkennung und Discogs")
+
+        def switch(show):
+            toggle.configure(text=("▾ " if show else "▸ ") + label)
+            if show:
+                advanced.pack(anchor="w", fill="x", after=toggle)
+            else:
+                advanced.pack_forget()
+        toggle.configure(command=lambda: switch(not advanced.winfo_ismapped()))
+        # Wer schon einen Key eingetragen hat, sieht ihn gleich
+        switch(bool(self.acoustid_key.get() or self.discogs_token.get()))
+        self._actions(page, self._tags, "umbenennen")
+
+    def _build_rename(self):
+        page = self._page("umbenennen", t("Schritt 3: Umbenennen und in Ordner sortieren"),
+                          t("Benennt die Dateien nach ihren Metadaten aus Schritt 2 und sortiert sie in Ordner. Mit einem Zielordner wandern sie dorthin, Dateien ohne Interpret oder Titel bleiben in der Sammlung."))
+        form = ttk.Frame(page)
+        form.pack(fill="x")
+        form.columnconfigure(1, weight=1)
+        ttk.Label(form, text=t("Zielordner:")).grid(row=0, column=0, sticky="w", padx=(0, 8), pady=3)
+        ttk.Entry(form, textvariable=self.target_folder).grid(row=0, column=1, sticky="ew", pady=3)
+        ttk.Button(form, text=t("Auswählen ..."), command=self._choose_target).grid(row=0, column=2, padx=(6, 0))
+        ttk.Label(form, text=t("Leer lassen, wenn alles in der Sammlung bleiben soll."), style="Info.TLabel").grid(
+            row=1, column=1, columnspan=2, sticky="w")
+        ttk.Label(form, text=t("Muster:")).grid(row=2, column=0, sticky="w", padx=(0, 8), pady=(8, 3))
+        ttk.Combobox(form, textvariable=self.pattern, values=cli.PATTERNS).grid(
+            row=2, column=1, columnspan=2, sticky="ew", pady=(8, 3))
+        ttk.Label(form, text=t("Jahre je {zeitraum}:")).grid(row=3, column=0, sticky="w", padx=(0, 8), pady=3)
+        ttk.Spinbox(form, textvariable=self.period_years, from_=1, to=100, width=4).grid(
+            row=3, column=1, sticky="w", pady=3)
+        self.example = tk.StringVar()
+        ttk.Label(form, textvariable=self.example, style="Info.TLabel").grid(
+            row=4, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        for variable in (self.pattern, self.period_years, self.target_folder, self.folder):
+            variable.trace_add("write", self._update_example)
+        self._update_example()
+        self._actions(page, self._rename)
+
+    def _build_quick(self):
+        page = self._page(QUICK, t("Einzelne Dateien schnell umbenennen"),
+                          t("Zieh Audiodateien oder Ordner hierher. Sie werden nach dem Muster aus Schritt 3 umbenannt und bleiben in ihrem Ordner. Eine Sammlung brauchst du dafür nicht, und vor dem Umbenennen siehst du die neuen Namen."))
+        self.drop_zone = ttk.Label(page, text=t("Dateien hier ablegen"), anchor="center", relief="groove",
+                                   padding=50)
+        self.drop_zone.pack(fill="x", pady=(6, 0))
+
+    def _update_example(self, *unused):
+        """Zeigt am Beispiel, wohin eine Datei mit dem aktuellen Muster käme."""
+        sample = SimpleNamespace(artist="Prince", title="Kiss", album="Parade", albumartist="", year="1986",
+                                 genre="Funk", track="4", path="kiss.mp3")
+        try:
+            name = cli.target_name(sample, self.pattern.get().strip(), self._period_years(quiet=True) or 5)
+        except (KeyError, ValueError, IndexError):
+            name = None
+        if not name:
+            self.example.set(t("Das Muster ist ungültig oder ergibt keinen Namen."))
+            return
+        base = self.target_folder.get().strip() or self.folder.get().strip() or t("Sammlung")
+        if "/" not in self.pattern.get() and not self.target_folder.get().strip():
+            base = os.path.join(base, "…")
+        self.example.set(t("Beispiel: {path}", path=os.path.join(base, name)))
+
+    def _go(self, key):
+        self.page.set(key)
+        self._show_page()
+
+    def _show_page(self):
+        self.pages[self.page.get()].tkraise()
+
+    def _status_key(self):
+        folder = self.folder.get().strip()
+        return system.fold(os.path.abspath(folder)) if folder else ""
+
+    def _refresh_nav(self, *unused):
+        done = self.status.get(self._status_key(), {})
+        for number, key in enumerate(STEPS, 1):
+            when = done.get(key)
+            state = t("Ausgeführt am {date}", date=when) if when else t("Noch nicht ausgeführt")
+            self.nav_texts[key].set(f"{number}. {t(STEP_NAMES[key])}\n     {state}")
+        self.nav_texts[QUICK].set(f"{t('Schnell umbenennen')}\n     {t('Ohne Sammlung')}")
+
+    def _mark_done(self, step, folder):
+        key = system.fold(os.path.abspath(folder))
+        self.status.setdefault(key, {})[step] = datetime.datetime.now().strftime("%d.%m.%Y")
+        self._save()
+        self._refresh_nav()
 
     def _enable_drop(self):
         """Macht das ganze Fenster zum Ablageziel; ohne tkdnd geht alles andere weiter."""
@@ -252,13 +389,6 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self._run_background(cli.cmd_rename_files, Namespace(dateien=paths, muster=settings["muster"], zeitraum=years, apply=True,
                                                              review=self._ask_review))
         return event.action
-
-    def _step(self, parent, row, label, action):
-        ttk.Label(parent, text=label).grid(row=row, column=0, columnspan=2, sticky="w", pady=(6, 2))
-        frame = ttk.Frame(parent)
-        frame.grid(row=row, column=2, sticky="e", pady=(6, 2))
-        self._button(frame, t("Vorschau"), lambda: action(False)).pack(side="left")
-        self._button(frame, t("Prüfen und ausführen"), lambda: action(True)).pack(side="left", padx=(6, 0))
 
     def _button(self, parent, text, command):
         button = ttk.Button(parent, text=text, command=command)
@@ -295,6 +425,10 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
     def _show_progress(self, done, total, text, left):
         self.progress["value"] = done * 100 / total if total else 0
         self.progress_text.set(progress_line(done, total, text, left))
+        if self.running_step:
+            number = STEPS.index(self.running_step) + 1
+            self.nav_texts[self.running_step].set(
+                f"{number}. {t(STEP_NAMES[self.running_step])}\n     {t('Läuft: {percent} %', percent=round(self.progress['value']))}")
 
     def _set_busy(self, busy):
         for button in self.buttons:
@@ -303,6 +437,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         if not busy:
             self.progress["value"] = 0
             self.progress_text.set("")
+            self.running_step = None
+            self._refresh_nav()
 
     def _drain_events(self):
         while True:
@@ -320,20 +456,28 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                 self._open_review(*value)
             elif kind == "offer_update":
                 self._offer_update(value)
+            elif kind == "done":
+                value()
             elif kind == "editor":
                 TagEditor(self, value)
             elif kind == "quit":
                 self.destroy()
                 return
-        self.after(100, self._drain_events)
+        self.drain_id = self.after(100, self._drain_events)
 
-    def _run_background(self, work, *args, **kwargs):
+    def destroy(self):
+        self.after_cancel(self.drain_id)
+        super().destroy()
+
+    def _run_background(self, work, *args, on_success=None, **kwargs):
         def runner():
             job.reset()
             self.events.put(("busy", True))
             with contextlib.redirect_stdout(QueueWriter(self.events)):
                 try:
                     work(*args, **kwargs)
+                    if on_success and not self.review_cancelled:
+                        self.events.put(("done", on_success))
                 except Cancelled:
                     print(t("Abgebrochen. Bereits Erledigtes bleibt erhalten und lässt sich im Verlauf zurücknehmen."))
                 except SystemExit as exc:
@@ -353,6 +497,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
             closed.set()
         self.events.put(("review", (title, columns, editable, rows, finished)))
         closed.wait()
+        self.review_cancelled = answer["rows"] is None
         return answer["rows"]
 
     def _open_review(self, title, columns, editable, rows, finished):
@@ -366,22 +511,25 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                     "cover": self.cover.get(), "songtexte": self.lyrics.get(), "genres": self.unify_genres.get(),
                     "muster": self.pattern.get().strip(), "zielordner": self.target_folder.get().strip(),
                     "zeitraum_jahre": self._period_years(quiet=True) or cli.PERIOD_YEARS,
-                    "sprache": i18n.LANGUAGES[self.language.get()]}
+                    "sprache": i18n.LANGUAGES[self.language.get()], "status": self.status}
         save_settings(settings)
         return settings
 
-    def _start(self, command, apply, **options):
+    def _start(self, step, command, apply, **options):
         folder = self.folder.get().strip()
         if not folder:
-            messagebox.showinfo("Music Renamer", t("Bitte zuerst die Sammlung auswählen."))
+            messagebox.showinfo("Music Renamer", t("Bitte zuerst oben die Sammlung auswählen."))
             return
         settings = self._save()
         os.environ["ACOUSTID_KEY"] = settings["acoustid_key"]
         os.environ["DISCOGS_TOKEN"] = settings["discogs_token"]
-        self._run_background(command, Namespace(ordner=folder, apply=apply, review=self._ask_review, **options))
+        # Nur ein ausgeführter Schritt zählt als erledigt, eine Vorschau nicht
+        self.running_step, self.review_cancelled = step, False
+        self._run_background(command, Namespace(ordner=folder, apply=apply, review=self._ask_review, **options),
+                             on_success=(lambda: self._mark_done(step, folder)) if apply else None)
 
     def _dupes(self, apply):
-        self._start(cli.cmd_dupes, apply, ziel=None, aehnlich=self.similar.get(), klang=self.sound.get())
+        self._start("dubletten", cli.cmd_dupes, apply, ziel=None, aehnlich=self.similar.get(), klang=self.sound.get())
 
     def _tags(self, apply):
         accuracy = self.custom_accuracy.get().strip() or LEVEL_LABELS[self.accuracy.get()]
@@ -390,13 +538,13 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         except ValueError:
             messagebox.showerror("Music Renamer", t("Bitte als eigenen Wert eine Zahl von 1 bis 100 eintragen."))
             return
-        self._start(cli.cmd_tag, apply, ueberschreiben=self.overwrite.get(), limit=None, genauigkeit=accuracy,
+        self._start("tags", cli.cmd_tag, apply, ueberschreiben=self.overwrite.get(), limit=None, genauigkeit=accuracy,
                     cover=self.cover.get(), songtexte=self.lyrics.get(), genres=self.unify_genres.get())
 
     def _open_editor(self):
         folder = self.folder.get().strip()
         if not folder:
-            messagebox.showinfo("Music Renamer", t("Bitte zuerst die Sammlung auswählen."))
+            messagebox.showinfo("Music Renamer", t("Bitte zuerst oben die Sammlung auswählen."))
             return
         self._run_background(self._load_editor, folder)
 
@@ -422,7 +570,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         years = self._period_years()
         if years is None:
             return
-        self._start(cli.cmd_rename, apply, muster=self.pattern.get().strip(), zeitraum=years,
+        self._start("umbenennen", cli.cmd_rename, apply, muster=self.pattern.get().strip(), zeitraum=years,
                     zielordner=self.target_folder.get().strip() or None)
 
     def _check_update(self, quiet):

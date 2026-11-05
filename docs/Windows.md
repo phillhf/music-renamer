@@ -32,7 +32,7 @@ Eine vorhandene Installation erkennt das Setup und aktualisiert sie. Das gilt au
 Für Administratoren gibt es ein stilles Setup:
 
 ```powershell
-.\Music-Renamer-Setup-0.14.0.exe /VERYSILENT /DIR="D:\Music Renamer" /TASKS="desktopicon,cli"
+.\Music-Renamer-Setup-0.15.0.exe /VERYSILENT /DIR="D:\Music Renamer" /TASKS="desktopicon,cli"
 ```
 
 ## Erster Start
@@ -47,13 +47,13 @@ Das Programm fragt beim Start, ob es eine neue Version installieren soll, wenn e
 
 Erstelle zuerst eine Sicherung, dann geht es in dieser Reihenfolge:
 
-1. **Dubletten:** Bei Schritt 1 auf **Prüfen und ausführen** klicken. Prüfe die Liste und klicke auf **Ausgewählte ausführen**. Dubletten liegen danach in `C:\Musik\Dubletten`.
-2. **Metadaten:** Bei Schritt 2 **Fehlende Cover einbetten** und **Fehlende Songtexte einbetten** ankreuzen, dann auf **Prüfen und ausführen** klicken. Bei großen Sammlungen dauert das lange. Prüfe die Liste und führe sie aus.
-3. **Umbenennen:** Bei Schritt 3 das Muster wählen und auf **Prüfen und ausführen** klicken. Prüfe die neuen Namen und führe sie aus.
+1. **Dubletten:** Links **1. Dubletten aussortieren** wählen und **2. Prüfen und ausführen** klicken. Prüfe die Liste und klicke auf **Ausgewählte ausführen**. Dubletten liegen danach in `C:\Musik\Dubletten`.
+2. **Metadaten:** Mit **Weiter zu Schritt 2** zur nächsten Seite, **Fehlende Cover einbetten** und **Fehlende Songtexte einbetten** ankreuzen, dann **2. Prüfen und ausführen** klicken. Bei großen Sammlungen dauert das lange. Prüfe die Liste und führe sie aus.
+3. **Umbenennen:** Mit **Weiter zu Schritt 3** zur nächsten Seite, Zielordner und Muster wählen und **2. Prüfen und ausführen** klicken. Prüfe die neuen Namen und führe sie aus.
 
 Hat etwas nicht gepasst, nimmst du es über **Verlauf** wieder zurück. Alle Optionen erklärt die [Bedienungsanleitung](Bedienung.md).
 
-Zum schnellen Umbenennen einzelner Dateien ziehst du sie aus dem Explorer direkt ins Fenster.
+Zum schnellen Umbenennen einzelner Dateien öffnest du links **Schnell umbenennen** und ziehst sie aus dem Explorer ins Fenster.
 
 ## Update
 
@@ -140,7 +140,7 @@ setx DISCOGS_TOKEN "dein-token"
 | Problem | Lösung |
 |---|---|
 | SmartScreen lässt das Setup nicht starten | **Weitere Informationen**, dann **Trotzdem ausführen**. Wird das Blockieren von deiner Firma verwaltet, frage die IT |
-| Das Antivirenprogramm meldet das Setup | Unsignierte Programme werden manchmal fälschlich gemeldet. Die Prüfsumme steht in der `.sha256`-Datei auf der Release-Seite, prüfen kannst du sie mit `Get-FileHash .\Music-Renamer-Setup-0.14.0.exe` |
+| Das Antivirenprogramm meldet das Setup | Unsignierte Programme werden manchmal fälschlich gemeldet. Die Prüfsumme steht in der `.sha256`-Datei auf der Release-Seite, prüfen kannst du sie mit `Get-FileHash .\Music-Renamer-Setup-0.15.0.exe` |
 | Dateien lassen sich nicht ändern | Schließe Player, die die Musik gerade nutzen, und prüfe, ob die Dateien schreibgeschützt sind. Das Programm meldet solche Dateien im Protokoll und läuft weiter |
 | Pfad zu lang | Sehr tiefe Ordner können die Grenze von Windows überschreiten. Nutze ein kürzeres Muster oder einen kürzeren Sammlungsordner |
 | `music-renamer-cli` wird nicht erkannt | Öffne ein neues Terminal. Hilft das nicht, starte das Setup erneut und prüfe das Häkchen **Befehlszeile hinzufügen** |

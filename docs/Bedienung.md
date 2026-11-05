@@ -29,14 +29,15 @@ Das Programm löscht nie Musik. Dubletten werden nur verschoben.
 
 ## Das Fenster im Überblick
 
+Das Fenster führt dich Schritt für Schritt:
+
 | Bereich | Wozu |
 |---|---|
-| **Sammlung** | der Ordner mit deiner Musik, alle Unterordner zählen mit. „Auswählen …“ öffnet die Ordnerauswahl |
-| **1. Dubletten verschieben** | doppelte Dateien aussortieren |
-| **2. Metadaten ergänzen** | Interpret, Album, Jahr, Genre, Cover und Songtexte ergänzen |
-| **3. Dateien umbenennen und sortieren** | einheitliche Namen und Ordner |
-| **Ablagefeld** | Dateien hineinziehen, um sie direkt umzubenennen |
-| **Protokoll** | das große Textfeld zeigt, was das Programm tut |
+| **Sammlung** oben | der Ordner mit deiner Musik, alle Unterordner zählen mit. „Auswählen …“ öffnet die Ordnerauswahl. Er gilt für alle Schritte |
+| **Schrittliste** links | die drei Schritte in ihrer Reihenfolge. Unter jedem steht, ob und wann er für diese Sammlung zuletzt ausgeführt wurde, während er läuft der Fortschritt in Prozent. Ein Klick öffnet den Schritt |
+| **Schritt-Seite** rechts | nur der gewählte Schritt: oben ein Satz, was er tut, darunter seine Optionen und die Knöpfe **1. Vorschau ansehen** und **2. Prüfen und ausführen**. **Weiter zu Schritt …** führt zum nächsten |
+| **Schnell umbenennen** links unten | eigene Seite zum Hineinziehen einzelner Dateien |
+| **Protokoll** | zeigt, was das Programm tut |
 | **Fortschrittsbalken und Abbrechen** | Stand und Restzeit des laufenden Schritts |
 | **Verlauf** | ausgeführte Schritte ansehen und zurücknehmen |
 | **Berichte öffnen** | öffnet den Ordner mit den CSV-Berichten |
@@ -46,14 +47,16 @@ Das Programm löscht nie Musik. Dubletten werden nur verschoben.
 | **Nach Updates suchen** | prüft auf eine neue Version |
 | **Sprache** | Deutsch oder Englisch, gilt ab dem nächsten Start |
 
-Während ein Schritt läuft, sind die anderen Schaltflächen gesperrt. Es läuft immer nur ein Schritt gleichzeitig.
+Als ausgeführt zählt ein Schritt erst, wenn du in der Prüfansicht bestätigt hast. Eine Vorschau oder eine abgebrochene Prüfansicht ändern den Status nicht. Der Status wird je Sammlung gespeichert und ist nach einem Neustart wieder da.
+
+Während ein Schritt läuft, sind die anderen Schaltflächen gesperrt. Es läuft immer nur ein Schritt gleichzeitig. Zwischen den Seiten wechseln kannst du trotzdem.
 
 ## Vorschau und Prüfen und ausführen
 
 Jeder Schritt hat zwei Schaltflächen:
 
-- **Vorschau** ändert nichts an deiner Musik. Das Programm rechnet alles durch und schreibt einen Bericht.
-- **Prüfen und ausführen** zeigt zuerst die Prüfansicht. Geändert wird erst, wenn du dort bestätigst.
+- **1. Vorschau ansehen** ändert nichts an deiner Musik. Das Programm rechnet alles durch und schreibt einen Bericht.
+- **2. Prüfen und ausführen** zeigt zuerst die Prüfansicht. Geändert wird erst, wenn du dort bestätigst.
 
 ## Die Prüfansicht
 
@@ -117,6 +120,7 @@ Das Programm liest Interpret und Titel aus den Tags, sonst aus dem Dateinamen. A
 | **Fehlende Cover einbetten** | vorhandene Cover bleiben immer unberührt |
 | **Fehlende Songtexte einbetten** | vorhandene Songtexte bleiben immer unberührt |
 | **Genres vereinheitlichen** | führt Varianten wie „Synth-Pop“ auf eine kurze Liste zurück, auch bei schon getaggten Dateien |
+| **Erweitert** | klappt die folgenden drei Einstellungen auf. Ist ein Key oder Token eingetragen, ist der Bereich schon offen |
 | **Genauigkeit Klangerkennung** | wie sicher ein Treffer am Klang sein muss: Streng (95 %), Normal (85 %) oder Locker (70 %) |
 | **eigener Wert** | Zahl von 1 bis 100, hat Vorrang vor der Auswahl |
 | **AcoustID-Key** | schaltet die Klangerkennung frei |
@@ -128,7 +132,7 @@ Das Programm liest Interpret und Titel aus den Tags, sonst aus dem Dateinamen. A
 
 **AcoustID-Key einrichten:** Dateien wie `track01.mp3` ohne Tags lassen sich nur am Klang erkennen.
 
-1. Klicke im Programm auf **Key holen**. Die Seite von AcoustID öffnet sich.
+1. Klappe in Schritt 2 **Erweitert** auf und klicke auf **Key holen**. Die Seite von AcoustID öffnet sich.
 2. Melde dich an und lege eine Anwendung an, das ist kostenlos.
 3. Kopiere den Key in das Feld **AcoustID-Key**.
 
@@ -166,6 +170,8 @@ Das **Muster** bestimmt den Namen. Du kannst eines aus der Liste wählen oder se
 | `{zeitraum}` | Zeitraum aus dem Jahr, zum Beispiel `1980 - 1984` | wird zu „Unbekanntes Jahr“ |
 | `{track}` | Tracknummer, immer zweistellig: `03` | bleibt leer |
 
+Unter dem Muster zeigt das Programm an einem Beispiel, wohin eine Datei käme. So siehst du die Wirkung, bevor du etwas startest.
+
 | Muster | Ergebnis |
 |---|---|
 | `{artist} - {title}` | `Queen - Bohemian Rhapsody.mp3` |
@@ -173,7 +179,7 @@ Das **Muster** bestimmt den Namen. Du kannst eines aus der Liste wählen oder se
 | `{artist}/{album}/{track} - {title}` | `Queen/A Night at the Opera/11 - Bohemian Rhapsody.mp3` |
 | `{albumartist}/{year} - {album}/{track} - {title}` | `Queen/1975 - A Night at the Opera/11 - Bohemian Rhapsody.mp3` |
 
-**Zeiträume:** `{zeitraum}` fasst Jahre zusammen. Wie viele, legt das Feld **Jahre je {zeitraum}** neben dem Muster fest, Standard ist 5. Die Zeiträume beginnen immer bei einer durch diese Zahl teilbaren Jahreszahl:
+**Zeiträume:** `{zeitraum}` fasst Jahre zusammen. Wie viele, legt das Feld **Jahre je {zeitraum}** unter dem Muster fest, Standard ist 5. Die Zeiträume beginnen immer bei einer durch diese Zahl teilbaren Jahreszahl:
 
 | Jahre je Zeitraum | 1983 wird zu |
 |---|---|
@@ -217,7 +223,7 @@ Zeichen, die Dateisysteme nicht erlauben, werden entfernt. Ist ein Name schon ve
 Wenn du nur ein paar Dateien schnell umbenennen willst, brauchst du keine Sammlung.
 
 1. Stelle in Schritt 3 das Muster ein.
-2. Ziehe Audiodateien oder Ordner aus dem Explorer, Finder oder Dateimanager ins Fenster. Das geht überall im Fenster, das Ablagefeld zeigt den Platz.
+2. Ziehe Audiodateien oder Ordner aus dem Explorer, Finder oder Dateimanager ins Fenster. Die Seite **Schnell umbenennen** links zeigt die Ablagefläche, es geht aber überall im Fenster.
 3. Prüfe die neuen Namen in der Prüfansicht und bestätige.
 
 Gut zu wissen:

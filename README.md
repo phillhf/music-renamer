@@ -30,7 +30,7 @@ Unterstützt MP3, FLAC, M4A, MP4, OGG, Opus und WMA. Cover lassen sich in WMA ni
 
 2. Installiere es wie in der Anleitung für dein System beschrieben.
 3. Erstelle eine Sicherung deiner Musik und wähle sie im Programm als **Sammlung** aus.
-4. Arbeite die drei Schritte der Reihe nach ab: **Dubletten verschieben**, **Metadaten ergänzen**, **Dateien umbenennen und sortieren**. Jeder Schritt zeigt erst, was er vorhat, und führt es nach deiner Bestätigung aus.
+4. Arbeite die drei Schritte in der Liste links der Reihe nach ab: **Dubletten aussortieren**, **Metadaten ergänzen**, **Umbenennen und sortieren**. Jeder Schritt erklärt oben, was er tut, zeigt dann, was er vorhat, und führt es erst nach deiner Bestätigung aus. Die Liste zeigt, welche Schritte schon erledigt sind.
 
 Gelöscht wird nie etwas: Dubletten werden nur verschoben, und jeder Schritt lässt sich im **Verlauf** zurücknehmen.
 

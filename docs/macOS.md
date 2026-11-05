@@ -56,13 +56,13 @@ Klicke dann bei **Sammlung** auf **Auswählen …** und wähle deinen Musikordne
 
 Erstelle zuerst eine Sicherung, dann geht es in dieser Reihenfolge:
 
-1. **Dubletten:** Bei Schritt 1 auf **Prüfen und ausführen** klicken. Prüfe die Liste und klicke auf **Ausgewählte ausführen**. Dubletten liegen danach im Ordner `Dubletten` in deiner Sammlung.
-2. **Metadaten:** Bei Schritt 2 **Fehlende Cover einbetten** und **Fehlende Songtexte einbetten** ankreuzen, dann auf **Prüfen und ausführen** klicken. Bei großen Sammlungen dauert das lange. Prüfe die Liste und führe sie aus.
-3. **Umbenennen:** Bei Schritt 3 das Muster wählen und auf **Prüfen und ausführen** klicken. Prüfe die neuen Namen und führe sie aus.
+1. **Dubletten:** Links **1. Dubletten aussortieren** wählen und **2. Prüfen und ausführen** klicken. Prüfe die Liste und klicke auf **Ausgewählte ausführen**. Dubletten liegen danach im Ordner `Dubletten` in deiner Sammlung.
+2. **Metadaten:** Mit **Weiter zu Schritt 2** zur nächsten Seite, **Fehlende Cover einbetten** und **Fehlende Songtexte einbetten** ankreuzen, dann **2. Prüfen und ausführen** klicken. Bei großen Sammlungen dauert das lange. Prüfe die Liste und führe sie aus.
+3. **Umbenennen:** Mit **Weiter zu Schritt 3** zur nächsten Seite, Zielordner und Muster wählen und **2. Prüfen und ausführen** klicken. Prüfe die neuen Namen und führe sie aus.
 
 Hat etwas nicht gepasst, nimmst du es über **Verlauf** wieder zurück. Alle Optionen erklärt die [Bedienungsanleitung](Bedienung.md).
 
-Zum schnellen Umbenennen einzelner Dateien ziehst du sie aus dem Finder direkt ins Fenster.
+Zum schnellen Umbenennen einzelner Dateien öffnest du links **Schnell umbenennen** und ziehst sie aus dem Finder ins Fenster.
 
 Die Musikbibliothek der App **Musik** verwaltet ihre Dateien selbst. Bearbeite sie besser nicht direkt, sonst stimmen deren Einträge nicht mehr. Music Renamer ist für normale Ordner gedacht.
 
