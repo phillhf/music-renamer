@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import tkinter as tk
+from tkinter import ttk
 import unittest
 from argparse import Namespace
 from unittest import mock
@@ -13,23 +14,36 @@ from musicrenamer import cli, gui
 
 
 def has_display():
-    try:
-        tk.Tk().destroy()
-        return True
-    except tk.TclError:
-        return False
+    # Kein Probefenster: Tk 9 stürzt auf dem Mac ab, wenn im selben Prozess ein zweites Tk entsteht
+    return bool(os.environ.get("DISPLAY")) or not sys.platform.startswith("linux")
 
 
 @unittest.skipUnless(has_display(), "braucht eine Anzeige")
 class Navigation(unittest.TestCase):
-    def setUp(self):
-        self.saved = {}
-        for patcher in (mock.patch.object(gui, "load_settings", return_value={"ordner": "C:/Musik"}),
-                        mock.patch.object(gui, "save_settings", side_effect=self.saved.update)):
+    """Alle Tests teilen ein Fenster, aus demselben Grund."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.saved = {}
+        cls.patchers = [mock.patch.object(gui, "load_settings", return_value={"ordner": "C:/Musik"}),
+                        mock.patch.object(gui, "save_settings", side_effect=cls.saved.update)]
+        for patcher in cls.patchers:
             patcher.start()
-            self.addCleanup(patcher.stop)
-        self.app = gui.App(auto_update_check=False)
-        self.addCleanup(self.app.destroy)
+        cls.app = gui.App(auto_update_check=False)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.app.destroy()
+        for patcher in cls.patchers:
+            patcher.stop()
+
+    def setUp(self):
+        self.saved.clear()
+        self.app.status.clear()
+        self.app.folder.set("C:/Musik")
+        self.app.target_folder.set("")
+        self.app.pattern.set(cli.PATTERNS[0])
+        self.app._go("dubletten")
         self.app.update()
 
     def wait(self, condition, seconds=5):
@@ -50,7 +64,7 @@ class Navigation(unittest.TestCase):
         for current, following in (("dubletten", "tags"), ("tags", "umbenennen")):
             self.app._go(current)
             button = next(w for w in self.all_widgets(self.app.pages[current])
-                          if isinstance(w, tk.ttk.Button) and str(w.cget("text")).startswith("Weiter zu Schritt"))
+                          if isinstance(w, ttk.Button) and str(w.cget("text")).startswith("Weiter zu Schritt"))
             button.invoke()
             self.app.update()
             self.assertEqual(self.visible_page(), following)
@@ -89,13 +103,16 @@ class Navigation(unittest.TestCase):
 
     def test_advanced_options_open_and_close(self):
         toggle = next(w for w in self.all_widgets(self.app.pages["tags"])
-                      if isinstance(w, tk.ttk.Button) and "Erweitert" in str(w.cget("text")))
+                      if isinstance(w, ttk.Button) and "Erweitert" in str(w.cget("text")))
         self.app._go("tags")
         self.app.update()
-        self.assertFalse(self.app.level_box.winfo_ismapped())
+        opened = self.app.level_box.winfo_ismapped()
         toggle.invoke()
         self.app.update()
-        self.assertTrue(self.app.level_box.winfo_ismapped())
+        self.assertNotEqual(self.app.level_box.winfo_ismapped(), opened)
+        toggle.invoke()
+        self.app.update()
+        self.assertEqual(self.app.level_box.winfo_ismapped(), opened)
 
     def test_quick_rename_has_its_own_page(self):
         self.assertIs(self.app.drop_zone.master, self.app.pages[gui.QUICK])
