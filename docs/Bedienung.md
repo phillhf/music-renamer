@@ -162,7 +162,8 @@ Das **Muster** bestimmt den Namen. Du kannst eines aus der Liste wählen oder se
 | `{album}` | Album | wird zu „Unbekanntes Album“ |
 | `{albumartist}` | Album-Interpret | nimmt den Interpreten |
 | `{year}` | Jahr | bleibt leer |
-| `{genre}` | Genre | bleibt leer |
+| `{genre}` | Genre, bei mehreren wie „Hip-Hop; Rap“ das erste | wird zu „Unbekanntes Genre“ |
+| `{zeitraum}` | Zeitraum aus dem Jahr, zum Beispiel `1980 - 1984` | wird zu „Unbekanntes Jahr“ |
 | `{track}` | Tracknummer, immer zweistellig: `03` | bleibt leer |
 
 | Muster | Ergebnis |
@@ -171,6 +172,30 @@ Das **Muster** bestimmt den Namen. Du kannst eines aus der Liste wählen oder se
 | `{track} - {title}` | `11 - Bohemian Rhapsody.mp3` |
 | `{artist}/{album}/{track} - {title}` | `Queen/A Night at the Opera/11 - Bohemian Rhapsody.mp3` |
 | `{albumartist}/{year} - {album}/{track} - {title}` | `Queen/1975 - A Night at the Opera/11 - Bohemian Rhapsody.mp3` |
+
+**Zeiträume:** `{zeitraum}` fasst Jahre zusammen. Wie viele, legt das Feld **Jahre je {zeitraum}** neben dem Muster fest, Standard ist 5. Die Zeiträume beginnen immer bei einer durch diese Zahl teilbaren Jahreszahl:
+
+| Jahre je Zeitraum | 1983 wird zu |
+|---|---|
+| 5 | `1980 - 1984` |
+| 10 | `1980 - 1989` |
+| 1 | `1983` |
+
+Mit dem Muster `{zeitraum}/{genre}/{artist} - {title}` und einem Zielordner entsteht zum Beispiel:
+
+```
+Musik sortiert\
+  1980 - 1984\
+    Funk\
+    Hip-Hop\
+    Rap\
+  1985 - 1989\
+    ...
+  Unbekanntes Jahr\
+    Rock\
+```
+
+Jedes Genre aus den Tags bekommt einen eigenen Ordner, auch seltene wie „Synth-Pop“. Wer weniger, größere Ordner will, lässt vorher Schritt 2 mit **Genres vereinheitlichen** laufen. Dann wird zum Beispiel Rap zu Hip-Hop und Funk zu R&B.
 
 **Ohne `/` im Muster** bleibt jede Datei in ihrem Ordner. **Mit `/`** wird die ganze Sammlung neu sortiert, und leere Ordner werden entfernt. Der Schrägstrich `/` gilt auch unter Windows.
 

@@ -118,6 +118,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.unify_genres = tk.BooleanVar(value=settings.get("genres", False))
         self.pattern = tk.StringVar(value=settings.get("muster", cli.PATTERNS[0]))
         self.target_folder = tk.StringVar(value=settings.get("zielordner", ""))
+        self.period_years = tk.StringVar(value=str(settings.get("zeitraum_jahre", cli.PERIOD_YEARS)))
         self.language = tk.StringVar(value=next(k for k, v in i18n.LANGUAGES.items() if v == i18n.language))
         self.progress_text = tk.StringVar()
         self._build()
@@ -184,6 +185,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         rename.pack(fill="x")
         ttk.Label(rename, text=t("Muster:")).pack(side="left", padx=(0, 4))
         ttk.Combobox(rename, textvariable=self.pattern, values=cli.PATTERNS).pack(side="left", fill="x", expand=True)
+        ttk.Label(rename, text=t("Jahre je {zeitraum}:")).pack(side="left", padx=(12, 4))
+        ttk.Spinbox(rename, textvariable=self.period_years, from_=1, to=100, width=4).pack(side="left")
         target = ttk.Frame(section)
         target.pack(fill="x", pady=(4, 0))
         ttk.Label(target, text=t("Zielordner:")).pack(side="left", padx=(0, 4))
@@ -242,8 +245,11 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
             self._print(t("Bitte warten, bis der laufende Schritt fertig ist."))
             return event.action
         paths = self.tk.splitlist(event.data)
+        years = self._period_years()
+        if years is None:
+            return event.action
         settings = self._save()
-        self._run_background(cli.cmd_rename_files, Namespace(dateien=paths, muster=settings["muster"], apply=True,
+        self._run_background(cli.cmd_rename_files, Namespace(dateien=paths, muster=settings["muster"], zeitraum=years, apply=True,
                                                              review=self._ask_review))
         return event.action
 
@@ -359,6 +365,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                     "eigene_genauigkeit": self.custom_accuracy.get().strip(),
                     "cover": self.cover.get(), "songtexte": self.lyrics.get(), "genres": self.unify_genres.get(),
                     "muster": self.pattern.get().strip(), "zielordner": self.target_folder.get().strip(),
+                    "zeitraum_jahre": self._period_years(quiet=True) or cli.PERIOD_YEARS,
                     "sprache": i18n.LANGUAGES[self.language.get()]}
         save_settings(settings)
         return settings
@@ -400,8 +407,22 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         # Ein eigener Wert hat Vorrang, die Stufe gilt dann nicht
         self.level_box.configure(state="disabled" if self.custom_accuracy.get().strip() else "readonly")
 
+    def _period_years(self, quiet=False):
+        try:
+            years = int(self.period_years.get().strip())
+        except ValueError:
+            years = 0
+        if 1 <= years <= 100:
+            return years
+        if not quiet:
+            messagebox.showerror("Music Renamer", t("Jahre je Zeitraum müssen zwischen 1 und 100 liegen."))
+        return None
+
     def _rename(self, apply):
-        self._start(cli.cmd_rename, apply, muster=self.pattern.get().strip(),
+        years = self._period_years()
+        if years is None:
+            return
+        self._start(cli.cmd_rename, apply, muster=self.pattern.get().strip(), zeitraum=years,
                     zielordner=self.target_folder.get().strip() or None)
 
     def _check_update(self, quiet):

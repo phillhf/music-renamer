@@ -74,6 +74,7 @@ music-renamer-cli tags "/mnt/nas/Meine Musik"
 | `--genres` | `tags` | vereinheitlicht Genres |
 | `--muster MUSTER` | `umbenennen` | Aufbau von Dateiname und Ordnern |
 | `--ziel ORDNER` | `umbenennen` | verschiebt alle benennbaren Dateien in diesen Ordner |
+| `--zeitraum N` | `umbenennen` | Jahre je `{zeitraum}`, Standard 5 |
 | `-h`, `--help` | alle | zeigt die Hilfe |
 
 ## dubletten
@@ -190,12 +191,13 @@ Eigene Genre-Zuordnungen stehen in der Datei `genre-regeln.json` im [Datenordner
 Benennt Dateien nach ihren Tags und sortiert sie auf Wunsch in Ordner.
 
 ```bash
-music-renamer-cli umbenennen ORDNER [--apply] [--muster "MUSTER"] [--ziel ZIELORDNER]
+music-renamer-cli umbenennen ORDNER [--apply] [--muster "MUSTER"] [--zeitraum N] [--ziel ZIELORDNER]
 ```
 
 | Option | Bedeutung |
 |---|---|
 | `--muster "MUSTER"` | Aufbau von Dateiname und Ordnern, siehe unten |
+| `--zeitraum N` | wie viele Jahre `{zeitraum}` zusammenfasst, 1 bis 100, Standard 5. Mit 5 wird 1983 zu `1980 - 1984`, mit 10 zu `1980 - 1989` |
 | `--ziel ORDNER` | verschiebt alle Dateien mit Interpret und Titel in diesen Ordner, nach dem Muster sortiert. Dateien ohne Interpret oder Titel bleiben in der Sammlung. Ohne die Option bleibt alles in der Sammlung |
 
 Verfügbare Platzhalter:
@@ -207,7 +209,8 @@ Verfügbare Platzhalter:
 | `{album}` | Album | wird zu „Unbekanntes Album“ |
 | `{albumartist}` | Album-Interpret | nimmt `{artist}` |
 | `{year}` | Jahr | bleibt leer |
-| `{genre}` | Genre | bleibt leer |
+| `{genre}` | Genre, bei mehreren wie „Hip-Hop; Rap“ das erste | wird zu „Unbekanntes Genre“ |
+| `{zeitraum}` | Zeitraum aus dem Jahr, zum Beispiel `1980 - 1984` | wird zu „Unbekanntes Jahr“ |
 | `{track}` | Tracknummer, immer zweistellig: `03` | bleibt leer |
 
 Ein `/` im Muster erzeugt Ordner, dann wird die **ganze Sammlung** ab dem angegebenen Ordner neu sortiert und leere Ordner werden entfernt. Ohne `/` bleibt jede Datei in ihrem Ordner, Standard ist `{artist} - {title}`.
@@ -246,6 +249,20 @@ Dasselbe ausführen:
 ```bash
 music-renamer-cli umbenennen ~/Musik --muster "{artist}/{album}/{track} - {title}" --apply
 ```
+
+Nach Fünf-Jahres-Zeiträumen und darin nach Genre in einen eigenen Ordner sortieren:
+
+```bash
+music-renamer-cli umbenennen ~/Musik --muster "{zeitraum}/{genre}/{artist} - {title}" --ziel ~/Musik-sortiert
+```
+
+Dasselbe nach Jahrzehnten:
+
+```bash
+music-renamer-cli umbenennen ~/Musik --muster "{zeitraum}/{genre}/{artist} - {title}" --zeitraum 10 --ziel ~/Musik-sortiert
+```
+
+Ohne Jahr landet eine Datei in „Unbekanntes Jahr“, ohne Genre in „Unbekanntes Genre“.
 
 Fertige Dateien in einen eigenen Ordner verschieben, die Problemfälle bleiben zurück:
 

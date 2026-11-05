@@ -392,6 +392,36 @@ class Patterns(Base):
     def move_to(self, target, pattern="{artist}/{album}/{track} - {title}"):
         cli.cmd_rename(Namespace(ordner=self.root, muster=pattern, apply=True, zielordner=target))
 
+    def test_period_boundaries(self):
+        self.assertEqual([cli.period(y) for y in ("1980", "1984", "1985", "1984-05-01", "", "unbekannt")],
+                         ["1980 - 1984", "1980 - 1984", "1985 - 1989", "1980 - 1984", cli.UNKNOWN_YEAR, cli.UNKNOWN_YEAR])
+        self.assertEqual((cli.period("1987", 10), cli.period("1987", 1)), ("1980 - 1989", "1987"))
+
+    def test_periods_with_genre_folders(self):
+        songs = (("a.mp3", "1982", "Hip-Hop"), ("b.mp3", "1983", "Funk"), ("c.mp3", "1986", "Hip-Hop; Rap"),
+                 ("d.mp3", "", "Rap"), ("e.mp3", "1981", ""))
+        for number, (name, year, genre) in enumerate(songs):
+            make_mp3(self.path(name), number, tags={"artist": "A", "title": name[0], "year": year, "genre": genre})
+        target = os.path.join(self.tmp.name, "Sortiert")
+        self.move_to(target, "{zeitraum}/{genre}/{artist} - {title}")
+        found = sorted(os.path.relpath(os.path.join(d, n), target).replace(os.sep, "/")
+                       for d, _, names in os.walk(target) for n in names)
+        self.assertEqual(found, ["1980 - 1984/Funk/A - b.mp3", "1980 - 1984/Hip-Hop/A - a.mp3",
+                                 f"1980 - 1984/{cli.UNKNOWN_GENRE}/A - e.mp3", "1985 - 1989/Hip-Hop/A - c.mp3",
+                                 f"{cli.UNKNOWN_YEAR}/Rap/A - d.mp3"])
+
+    def test_period_length_is_adjustable(self):
+        make_mp3(self.path("a.mp3"), 1, tags={"artist": "A", "title": "T", "year": "1987", "genre": "Rock"})
+        target = os.path.join(self.tmp.name, "Sortiert")
+        cli.cmd_rename(Namespace(ordner=self.root, muster="{zeitraum}/{title}", apply=True, zielordner=target,
+                                 zeitraum=10))
+        self.assertTrue(os.path.exists(os.path.join(target, "1980 - 1989", "T.mp3")))
+
+    def test_invalid_period_length_is_refused(self):
+        make_mp3(self.path("a.mp3"), 1, tags={"artist": "A", "title": "T"})
+        with self.assertRaises(SystemExit):
+            cli.cmd_rename(Namespace(ordner=self.root, muster="{zeitraum}/{title}", apply=True, zeitraum=0))
+
     def test_target_folder_takes_named_files_and_leaves_the_rest(self):
         make_mp3(self.path("wirr", "x.mp3"), 1, tags={"artist": "Queen", "title": "Song", "album": "Opera", "track": "3"})
         make_mp3(self.path("wirr", "track01.mp3"), 2)

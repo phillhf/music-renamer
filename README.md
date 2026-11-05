@@ -40,7 +40,7 @@ Gelöscht wird nie etwas: Dubletten werden nur verschoben, und jeder Schritt lä
 - **Metadaten ergänzen:** Interpret, Titel, Album, Album-Interpret, Jahr, Genre und Tracknummer aus [MusicBrainz](https://musicbrainz.org), der iTunes-Suche und optional [Discogs](https://www.discogs.com)
 - **Cover und Songtexte einbetten:** aus dem [Cover Art Archive](https://coverartarchive.org) und von [LRCLIB](https://lrclib.net)
 - **Am Klang erkennen:** auch Dateien ohne Tags und ohne brauchbaren Namen, mit einem kostenlosen Key von [AcoustID](https://acoustid.org/new-application)
-- **Umbenennen und sortieren:** nach frei wählbarem Muster, auf Wunsch in Ordner nach Interpret und Album und in einen eigenen Zielordner
+- **Umbenennen und sortieren:** nach frei wählbarem Muster, auf Wunsch in Ordner nach Interpret und Album oder nach Zeitraum wie 1980 - 1984 und Genre, auch in einen eigenen Zielordner
 - **Dateien ins Fenster ziehen:** direkt umbenennen, ohne Sammlung
 - **Prüfansicht, Tag-Editor, Verlauf:** jede Änderung vorher sehen, von Hand korrigieren und zurücknehmen
 - **Für große Sammlungen gebaut:** Treffer werden sofort gespeichert, und bei Verbindungsabbrüchen pausiert der Lauf und macht von selbst weiter
@@ -60,7 +60,7 @@ music-renamer-cli tags ORDNER [--apply] [--cover] [--songtexte] [--genres] [--ue
 ```
 
 ```bash
-music-renamer-cli umbenennen ORDNER [--apply] [--muster "MUSTER"] [--ziel ZIELORDNER]
+music-renamer-cli umbenennen ORDNER [--apply] [--muster "MUSTER"] [--zeitraum N] [--ziel ZIELORDNER]
 ```
 
 ```bash

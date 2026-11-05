@@ -2,6 +2,7 @@
 import argparse
 import csv
 import os
+import re
 import sys
 import time
 from collections import Counter
@@ -36,6 +37,9 @@ DATA_DIR = os.path.join(APP_DIR, "data")
 REPORT_DIR = os.path.join(APP_DIR, "berichte")
 DB_PATH = os.path.join(DATA_DIR, "mp3org.sqlite")
 UNKNOWN_ALBUM = "Unbekanntes Album"
+UNKNOWN_YEAR = "Unbekanntes Jahr"
+UNKNOWN_GENRE = "Unbekanntes Genre"
+PERIOD_YEARS = 5
 MAX_FAILURES = 25
 PROGRESS_GAP = 30
 DOCS_URL = "https://github.com/phillhf/music-renamer/blob/main/docs/"
@@ -54,7 +58,8 @@ Hilfe zu einem Befehl: music-renamer-cli tags --help
 Alle Befehle mit Beispielen: {DOCS_URL}Befehlszeile.md
 """
 PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist}/{album}/{track} - {title}",
-            "{albumartist}/{year} - {album}/{track} - {title}")
+            "{albumartist}/{year} - {album}/{track} - {title}", "{zeitraum}/{genre}/{artist} - {title}")
+PLACEHOLDERS = (*TAG_FIELDS, "zeitraum")
 
 
 def write_report(name, header, rows):
@@ -304,18 +309,38 @@ def cmd_tag(args):
 
 def check_pattern(pattern):
     try:
-        pattern.format(**dict.fromkeys(TAG_FIELDS, "x"))
+        pattern.format(**dict.fromkeys(PLACEHOLDERS, "x"))
     except (KeyError, ValueError, IndexError):
         sys.exit(t("Ungültiges Muster: {pattern}. Erlaubt sind {fields}.", pattern=pattern,
-                   fields=", ".join(f"{{{f}}}" for f in TAG_FIELDS)))
+                   fields=", ".join(f"{{{f}}}" for f in PLACEHOLDERS)))
 
 
-def target_name(track, pattern):
+def period_years(args):
+    years = getattr(args, "zeitraum", None)
+    years = PERIOD_YEARS if years is None else years
+    if not 1 <= years <= 100:
+        sys.exit(t("Jahre je Zeitraum müssen zwischen 1 und 100 liegen."))
+    return years
+
+
+def period(year, years=PERIOD_YEARS):
+    """Zeitraum wie "1980 - 1984"; die Grenzen liegen auf Vielfachen von years."""
+    found = re.search(r"\d{4}", year or "")  # Tags enthalten auch "1984-05-01"
+    if not found:
+        return UNKNOWN_YEAR
+    start = int(found[0]) // years * years
+    return str(start) if years == 1 else f"{start} - {start + years - 1}"
+
+
+def target_name(track, pattern, years=PERIOD_YEARS):
     values = {f: clean(getattr(track, f)) for f in TAG_FIELDS}
     if not (values["artist"] and values["title"]):
         return None
     values["albumartist"] = values["albumartist"] or values["artist"]
     values["album"] = values["album"] or UNKNOWN_ALBUM
+    # Bei mehreren Genres wie "Hip-Hop; Rap" zählt das erste, sonst entstünde ein Ordner je Kombination
+    values["genre"] = re.split(r"\s*[;/,|]\s*", values["genre"])[0] or UNKNOWN_GENRE
+    values["zeitraum"] = period(values["year"], years)
     values["track"] = values["track"].split("/")[0].zfill(2) if values["track"] else ""
     # Fehlt z. B. die Tracknummer, soll kein Name mit " - " beginnen
     parts = [safe_filename(p.format(**values)).strip(" -") for p in pattern.split("/")]
@@ -332,13 +357,13 @@ def remove_empty_folders(folder, root):
         folder = os.path.dirname(folder)
 
 
-def plan_renames(tracks, pattern, root, taken, destination=None):
+def plan_renames(tracks, pattern, root, taken, destination=None, years=PERIOD_YEARS):
     """Plant neue Namen; mit destination wandert alles Benennbare dorthin, der Rest bleibt liegen."""
     rows, skipped = [], 0
     # Ein Muster mit Ordnern sortiert die ganze Sammlung, sonst bleibt jede Datei in ihrem Ordner
     sorts = "/" in pattern or destination
     for track in tracks:
-        name = target_name(track, pattern)
+        name = target_name(track, pattern, years)
         if not name:
             skipped += 1
             continue
@@ -394,6 +419,7 @@ def files_below(folder):
 
 def cmd_rename(args):
     check_pattern(args.muster)
+    years = period_years(args)
     destination = getattr(args, "zielordner", None)
     if destination:
         destination = os.path.abspath(destination)
@@ -406,7 +432,7 @@ def cmd_rename(args):
         print(t("Zielordner: {path}. Dateien ohne Interpret oder Titel bleiben, wo sie sind.", path=destination))
         # Was dort schon liegt, auch Nicht-Musik, darf nicht überschrieben werden
         taken |= files_below(destination)
-    rows, skipped = plan_renames(tracks, args.muster, root, taken, destination)
+    rows, skipped = plan_renames(tracks, args.muster, root, taken, destination, years)
     run_renames(args, rows, skipped, root)
 
 
@@ -440,7 +466,8 @@ def cmd_rename_files(args):
         tracks.append(track)
     folders = {os.path.dirname(track.path) for track in tracks}
     taken = {system.fold(os.path.join(folder, name)) for folder in folders for name in os.listdir(folder)}
-    rows, skipped = plan_renames(tracks, args.muster.split("/")[-1], None, taken)
+    years = period_years(args)
+    rows, skipped = plan_renames(tracks, args.muster.split("/")[-1], None, taken, years=years)
     run_renames(args, rows, skipped, None)
 
 
@@ -505,6 +532,8 @@ def main():
     rename = command("umbenennen", cmd_rename, "Dateien nach Tags benennen")
     rename.add_argument("--muster", default=PATTERNS[0],
                         help=f'Standard "{PATTERNS[0]}"; / sortiert die Sammlung in Unterordner')
+    rename.add_argument("--zeitraum", type=int, default=PERIOD_YEARS,
+                        help=f"Jahre je Zeitraum für {{zeitraum}}, Standard {PERIOD_YEARS}")
     rename.add_argument("--ziel", dest="zielordner",
                         help="verschiebt alle benennbaren Dateien in diesen Ordner, der Rest bleibt in der Sammlung")
     undo = commands.add_parser("undo", help="letzten ausgeführten Schritt zurücknehmen", formatter_class=keep_lines,

@@ -8,6 +8,8 @@ EN = {
     "Abbrechen": "Cancel",
     "Abbruch: {reason}. Bisherige Treffer sind gespeichert, einfach erneut starten.": "Stopped: {reason}. Results so far are saved, just start again.",
     "Hilfe": "Help",
+    "Jahre je {zeitraum}:": "Years per {zeitraum}:",
+    "Jahre je Zeitraum müssen zwischen 1 und 100 liegen.": "Years per period must be between 1 and 100.",
     "Zielordner:": "Target folder:",
     "Zielordner auswählen": "Choose target folder",
     "Leer: alles bleibt in der Sammlung. Sonst wandern alle Dateien mit Interpret und Titel dorthin.": "Empty: everything stays in the collection. Otherwise all files with artist and title move there.",
