@@ -174,6 +174,17 @@ Das **Muster** bestimmt den Namen. Du kannst eines aus der Liste wählen oder se
 
 **Ohne `/` im Muster** bleibt jede Datei in ihrem Ordner. **Mit `/`** wird die ganze Sammlung neu sortiert, und leere Ordner werden entfernt. Der Schrägstrich `/` gilt auch unter Windows.
 
+**Zielordner:** Bleibt das Feld leer, bleibt alles in der Sammlung. Wählst du einen Ordner, zum Beispiel `D:\Musik sortiert`, wandern alle Dateien mit Interpret und Titel dorthin, nach dem Muster benannt und sortiert:
+
+| Muster | Ergebnis im Zielordner |
+|---|---|
+| `{artist}/{album}/{track} - {title}` | `D:\Musik sortiert\Queen\A Night at the Opera\11 - Bohemian Rhapsody.mp3` |
+| `{artist} - {title}` | `D:\Musik sortiert\Queen - Bohemian Rhapsody.mp3`, alle Dateien direkt im Zielordner |
+
+Dateien ohne Interpret oder Titel bleiben in der Sammlung. So hast du danach die fertigen Dateien im Zielordner und die Problemfälle im alten Ordner, die du mit dem Tag-Editor nacharbeiten und dann erneut verschieben kannst. Geleerte Ordner in der Sammlung werden entfernt.
+
+Die Dateien werden verschoben, nicht kopiert. Auf demselben Laufwerk geht das sofort, auf ein anderes Laufwerk muss jede Datei kopiert werden, das dauert bei großen Sammlungen deutlich länger. Bricht dabei eine Kopie ab, etwa weil der Datenträger voll ist, bleibt die Datei an ihrem alten Platz, und es bleibt keine halbe Kopie zurück. Vorhandene Dateien im Zielordner werden nie überschrieben. Der Zielordner darf nicht im Dubletten-Ordner liegen. Alles lässt sich im Verlauf zurücknehmen.
+
 Zeichen, die Dateisysteme nicht erlauben, werden entfernt. Ist ein Name schon vergeben, kommt ` (2)` dazu, vorhandene Dateien werden nie überschrieben. Dateien ohne Interpret oder Titel werden übersprungen, für sie hilft zuerst Schritt 2 oder der Tag-Editor.
 
 ## Dateien ins Fenster ziehen

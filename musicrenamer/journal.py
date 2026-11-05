@@ -40,8 +40,15 @@ def unique_path(path):
 
 def move_file(source, target, journal):
     os.makedirs(os.path.dirname(target), exist_ok=True)
+    existed = os.path.exists(target)
     journal.record(action="move", source=source, target=target)
-    shutil.move(source, target)
+    try:
+        shutil.move(source, target)
+    except BaseException:
+        # Auf ein anderes Laufwerk wird kopiert; bricht das ab, keine halbe Kopie liegen lassen
+        if not existed and os.path.exists(source) and os.path.exists(target) and not os.path.samefile(source, target):
+            os.remove(target)
+        raise
 
 
 def _entries(path):
@@ -66,6 +73,8 @@ def undo_run(path):
     for entry in reversed(_entries(path)):
         try:
             if entry["action"] == "move":
+                if os.path.exists(entry["source"]) and not os.path.exists(entry["target"]):
+                    continue  # Das Verschieben ist damals gescheitert, es gibt nichts zurückzunehmen
                 if os.path.exists(entry["source"]):
                     same = os.path.exists(entry["target"]) and os.path.samefile(entry["source"], entry["target"])
                     if not same:

@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from test_musicrenamer import Base, make_mp3
 
-from musicrenamer import albums, cli, fingerprint, library, lookup, tags
+from musicrenamer import albums, cli, fingerprint, journal, library, lookup, tags
 from musicrenamer.dupes import find_duplicates
 from musicrenamer.job import Cancelled, job
 
@@ -388,6 +388,70 @@ class Connection(unittest.TestCase):
 class Patterns(Base):
     def rename(self, pattern):
         cli.cmd_rename(Namespace(ordner=self.root, muster=pattern, apply=True))
+
+    def move_to(self, target, pattern="{artist}/{album}/{track} - {title}"):
+        cli.cmd_rename(Namespace(ordner=self.root, muster=pattern, apply=True, zielordner=target))
+
+    def test_target_folder_takes_named_files_and_leaves_the_rest(self):
+        make_mp3(self.path("wirr", "x.mp3"), 1, tags={"artist": "Queen", "title": "Song", "album": "Opera", "track": "3"})
+        make_mp3(self.path("wirr", "track01.mp3"), 2)
+        target = os.path.join(self.tmp.name, "Sortiert")
+        self.move_to(target)
+        self.assertTrue(os.path.exists(os.path.join(target, "Queen", "Opera", "03 - Song.mp3")))
+        self.assertTrue(os.path.exists(self.path("wirr", "track01.mp3")))
+        self.assertFalse(os.path.exists(self.path("wirr", "x.mp3")))
+
+    def test_flat_pattern_also_goes_to_target_folder(self):
+        make_mp3(self.path("a", "x.mp3"), 1, tags={"artist": "Queen", "title": "Song"})
+        target = os.path.join(self.tmp.name, "Sortiert")
+        self.move_to(target, "{artist} - {title}")
+        self.assertEqual(os.listdir(target), ["Queen - Song.mp3"])
+        self.assertFalse(os.path.exists(self.path("a")))
+
+    def test_files_already_in_target_are_never_overwritten(self):
+        make_mp3(self.path("x.mp3"), 1, tags={"artist": "Queen", "title": "Song"})
+        target = os.path.join(self.tmp.name, "Sortiert")
+        os.makedirs(target)
+        with open(os.path.join(target, "Queen - Song.mp3"), "wb") as f:
+            f.write(b"alt")
+        self.move_to(target, "{artist} - {title}")
+        self.assertEqual(sorted(os.listdir(target)), ["Queen - Song (2).mp3", "Queen - Song.mp3"])
+        with open(os.path.join(target, "Queen - Song.mp3"), "rb") as f:
+            self.assertEqual(f.read(), b"alt")
+
+    def test_move_to_target_can_be_undone(self):
+        make_mp3(self.path("wirr", "x.mp3"), 1, tags={"artist": "Queen", "title": "Song"})
+        target = os.path.join(self.tmp.name, "Sortiert")
+        self.move_to(target)
+        cli.cmd_undo(None)
+        self.assertTrue(os.path.exists(self.path("wirr", "x.mp3")))
+        self.assertFalse(os.path.exists(os.path.join(target, "Queen", cli.UNKNOWN_ALBUM, "Song.mp3")))
+
+    def test_target_inside_duplicates_folder_is_refused(self):
+        make_mp3(self.path("x.mp3"), 1, tags={"artist": "Queen", "title": "Song"})
+        with self.assertRaises(SystemExit):
+            self.move_to(self.path("Dubletten", "Sortiert"))
+        self.assertTrue(os.path.exists(self.path("x.mp3")))
+
+    def test_target_option_does_not_change_duplicates_folder(self):
+        args = Namespace(ordner=self.root, zielordner=os.path.join(self.tmp.name, "Sortiert"))
+        self.assertEqual(cli.dupes_dir(args), self.path("Dubletten"))
+
+    def test_broken_copy_leaves_no_half_file_and_undo_skips_it(self):
+        make_mp3(self.path("x.mp3"), 1)
+        target = os.path.join(self.tmp.name, "anderes Laufwerk", "x.mp3")
+
+        def half_copy(source, destination):
+            with open(destination, "wb") as f:
+                f.write(b"halb")
+            raise OSError("Datenträger voll")
+        log = journal.Journal(os.path.join(self.tmp.name, "data"), "umbenennen")
+        with mock.patch.object(journal.shutil, "move", half_copy), self.assertRaises(OSError):
+            journal.move_file(self.path("x.mp3"), target, log)
+        log.close()
+        self.assertFalse(os.path.exists(target))
+        self.assertTrue(os.path.exists(self.path("x.mp3")))
+        self.assertEqual(journal.undo_last(os.path.join(self.tmp.name, "data"))[2], [])
 
     def test_folder_pattern_sorts_collection_and_keeps_extension(self):
         make_mp3(self.path("wirr", "x.mp3"), 1, tags={"artist": "Queen", "title": "Song", "album": "Opera", "track": "3/12"})

@@ -73,6 +73,7 @@ music-renamer-cli tags "/mnt/nas/Meine Musik"
 | `--songtexte` | `tags` | bettet fehlende Songtexte ein |
 | `--genres` | `tags` | vereinheitlicht Genres |
 | `--muster MUSTER` | `umbenennen` | Aufbau von Dateiname und Ordnern |
+| `--ziel ORDNER` | `umbenennen` | verschiebt alle benennbaren Dateien in diesen Ordner |
 | `-h`, `--help` | alle | zeigt die Hilfe |
 
 ## dubletten
@@ -189,8 +190,13 @@ Eigene Genre-Zuordnungen stehen in der Datei `genre-regeln.json` im [Datenordner
 Benennt Dateien nach ihren Tags und sortiert sie auf Wunsch in Ordner.
 
 ```bash
-music-renamer-cli umbenennen ORDNER [--apply] [--muster "MUSTER"]
+music-renamer-cli umbenennen ORDNER [--apply] [--muster "MUSTER"] [--ziel ZIELORDNER]
 ```
+
+| Option | Bedeutung |
+|---|---|
+| `--muster "MUSTER"` | Aufbau von Dateiname und Ordnern, siehe unten |
+| `--ziel ORDNER` | verschiebt alle Dateien mit Interpret und Titel in diesen Ordner, nach dem Muster sortiert. Dateien ohne Interpret oder Titel bleiben in der Sammlung. Ohne die Option bleibt alles in der Sammlung |
 
 Verfügbare Platzhalter:
 
@@ -240,6 +246,20 @@ Dasselbe ausführen:
 ```bash
 music-renamer-cli umbenennen ~/Musik --muster "{artist}/{album}/{track} - {title}" --apply
 ```
+
+Fertige Dateien in einen eigenen Ordner verschieben, die Problemfälle bleiben zurück:
+
+```bash
+music-renamer-cli umbenennen ~/Musik --muster "{artist}/{album}/{track} - {title}" --ziel ~/Musik-sortiert
+```
+
+Dasselbe ausführen:
+
+```bash
+music-renamer-cli umbenennen ~/Musik --muster "{artist}/{album}/{track} - {title}" --ziel ~/Musik-sortiert --apply
+```
+
+Mit `--ziel` wird verschoben, nicht kopiert. Auf ein anderes Laufwerk dauert das länger, weil jede Datei kopiert werden muss. Vorhandene Dateien im Zielordner werden nie überschrieben, und `undo` holt alles zurück. Das `--ziel` von `dubletten` ist eine eigene Einstellung und davon unabhängig.
 
 Bericht: `umbenennen-vorschau.csv`.
 

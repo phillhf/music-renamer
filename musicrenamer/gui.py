@@ -117,6 +117,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.lyrics = tk.BooleanVar(value=settings.get("songtexte", False))
         self.unify_genres = tk.BooleanVar(value=settings.get("genres", False))
         self.pattern = tk.StringVar(value=settings.get("muster", cli.PATTERNS[0]))
+        self.target_folder = tk.StringVar(value=settings.get("zielordner", ""))
         self.language = tk.StringVar(value=next(k for k, v in i18n.LANGUAGES.items() if v == i18n.language))
         self.progress_text = tk.StringVar()
         self._build()
@@ -183,6 +184,13 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         rename.pack(fill="x")
         ttk.Label(rename, text=t("Muster:")).pack(side="left", padx=(0, 4))
         ttk.Combobox(rename, textvariable=self.pattern, values=cli.PATTERNS).pack(side="left", fill="x", expand=True)
+        target = ttk.Frame(section)
+        target.pack(fill="x", pady=(4, 0))
+        ttk.Label(target, text=t("Zielordner:")).pack(side="left", padx=(0, 4))
+        ttk.Entry(target, textvariable=self.target_folder).pack(side="left", fill="x", expand=True)
+        ttk.Button(target, text=t("Auswählen ..."), command=self._choose_target).pack(side="left", padx=(6, 0))
+        ttk.Label(section, text=t("Leer: alles bleibt in der Sammlung. Sonst wandern alle Dateien mit Interpret und Titel dorthin.")).pack(
+            anchor="w", pady=(2, 0))
         self.drop_zone = ttk.Label(section, text=t("Audiodateien oder Ordner hier ablegen, um sie direkt umzubenennen"),
                                    anchor="center", relief="groove", padding=8)
         self.drop_zone.pack(fill="x", pady=(6, 0))
@@ -255,6 +263,11 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         folder = filedialog.askdirectory(title=t("Sammlung auswählen"))
         if folder:
             self.folder.set(os.path.normpath(folder))
+
+    def _choose_target(self):
+        folder = filedialog.askdirectory(title=t("Zielordner auswählen"))
+        if folder:
+            self.target_folder.set(os.path.normpath(folder))
 
     def _open_reports(self):
         os.makedirs(cli.REPORT_DIR, exist_ok=True)
@@ -345,7 +358,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                     "genauigkeit": LEVEL_LABELS[self.accuracy.get()],
                     "eigene_genauigkeit": self.custom_accuracy.get().strip(),
                     "cover": self.cover.get(), "songtexte": self.lyrics.get(), "genres": self.unify_genres.get(),
-                    "muster": self.pattern.get().strip(), "sprache": i18n.LANGUAGES[self.language.get()]}
+                    "muster": self.pattern.get().strip(), "zielordner": self.target_folder.get().strip(),
+                    "sprache": i18n.LANGUAGES[self.language.get()]}
         save_settings(settings)
         return settings
 
@@ -387,7 +401,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.level_box.configure(state="disabled" if self.custom_accuracy.get().strip() else "readonly")
 
     def _rename(self, apply):
-        self._start(cli.cmd_rename, apply, muster=self.pattern.get().strip())
+        self._start(cli.cmd_rename, apply, muster=self.pattern.get().strip(),
+                    zielordner=self.target_folder.get().strip() or None)
 
     def _check_update(self, quiet):
         try:

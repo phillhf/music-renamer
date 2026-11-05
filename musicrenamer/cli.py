@@ -332,16 +332,17 @@ def remove_empty_folders(folder, root):
         folder = os.path.dirname(folder)
 
 
-def plan_renames(tracks, pattern, root, taken):
+def plan_renames(tracks, pattern, root, taken, destination=None):
+    """Plant neue Namen; mit destination wandert alles Benennbare dorthin, der Rest bleibt liegen."""
     rows, skipped = [], 0
     # Ein Muster mit Ordnern sortiert die ganze Sammlung, sonst bleibt jede Datei in ihrem Ordner
-    sorts = "/" in pattern
+    sorts = "/" in pattern or destination
     for track in tracks:
         name = target_name(track, pattern)
         if not name:
             skipped += 1
             continue
-        target = os.path.join(root if sorts else os.path.dirname(track.path), name)
+        target = os.path.join((destination or root) if sorts else os.path.dirname(track.path), name)
         if target == track.path:
             continue
         taken.discard(system.fold(track.path))
@@ -387,10 +388,25 @@ def run_renames(args, rows, skipped, root):
         print(t("Dateien umbenannt: {count}", count=done))
 
 
+def files_below(folder):
+    return {system.fold(os.path.join(path, name)) for path, _, names in os.walk(folder) for name in names}
+
+
 def cmd_rename(args):
     check_pattern(args.muster)
+    destination = getattr(args, "zielordner", None)
+    if destination:
+        destination = os.path.abspath(destination)
+        dupes = system.fold(dupes_dir(args))
+        if system.fold(destination) == dupes or system.fold(destination).startswith(dupes + os.sep):
+            sys.exit(t("Der Zielordner darf nicht im Dubletten-Ordner liegen."))
     root, db, tracks = prepare(args)
-    rows, skipped = plan_renames(tracks, args.muster, root, {system.fold(t_.path) for t_ in tracks})
+    taken = {system.fold(t_.path) for t_ in tracks}
+    if destination:
+        print(t("Zielordner: {path}. Dateien ohne Interpret oder Titel bleiben, wo sie sind.", path=destination))
+        # Was dort schon liegt, auch Nicht-Musik, darf nicht überschrieben werden
+        taken |= files_below(destination)
+    rows, skipped = plan_renames(tracks, args.muster, root, taken, destination)
     run_renames(args, rows, skipped, root)
 
 
@@ -489,6 +505,8 @@ def main():
     rename = command("umbenennen", cmd_rename, "Dateien nach Tags benennen")
     rename.add_argument("--muster", default=PATTERNS[0],
                         help=f'Standard "{PATTERNS[0]}"; / sortiert die Sammlung in Unterordner')
+    rename.add_argument("--ziel", dest="zielordner",
+                        help="verschiebt alle benennbaren Dateien in diesen Ordner, der Rest bleibt in der Sammlung")
     undo = commands.add_parser("undo", help="letzten ausgeführten Schritt zurücknehmen", formatter_class=keep_lines,
                                epilog=f"Mehr dazu: {DOCS_URL}Befehlszeile.md#undo")
     undo.set_defaults(handler=cmd_undo)
