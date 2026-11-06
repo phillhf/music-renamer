@@ -42,7 +42,7 @@ Das Fenster führt dich Schritt für Schritt:
 | **Verlauf** | ausgeführte Schritte ansehen und zurücknehmen |
 | **Berichte öffnen** | öffnet den Ordner mit den CSV-Berichten |
 | **Tag-Editor** | Tags von Hand ändern |
-| **Genre-Regeln** | eigene Genre-Zuordnungen bearbeiten |
+| **Genres** | Liste aller Genres der Sammlung, zusammengehörige zu einem Genre zusammenfassen |
 | **Neu anfangen** | löscht alle gespeicherten Suchergebnisse und Klang-Fingerabdrücke und setzt den Status aller Schritte zurück. Deine Musik und der Verlauf bleiben, Zurücknehmen geht weiterhin |
 | **Hilfe** | öffnet diese Anleitung im Browser, auch während ein Schritt läuft |
 | **Updates** | prüft auf eine neue Version |
@@ -148,16 +148,31 @@ Die Einstellungen werden beim Start eines Schritts gespeichert.
 
 **Alben:** Ein Ordner gilt als Album. Passen mindestens drei Titel und 60 % des Ordners oder mindestens fünf Titel zum selben Album, bekommen sie dieses Album samt Tracknummern und Album-Interpret. Enthält ein Ordner mehrere Alben, werden sie nacheinander erkannt. Schon vollständige Titel im Ordner zählen mit, behalten aber ihre Tags.
 
-**Genre-Regeln:** Die Schaltfläche öffnet eine Textdatei mit eigenen Zuordnungen. Links steht das Genre in Kleinbuchstaben, rechts das Ziel:
+**Genres zusammenfassen:** Ist Schritt 2 ausgeführt, öffnet sich das Fenster **Genres**. Später erreichst du es jederzeit über **Genres** unten. Es zeigt jedes Genre deiner Sammlung mit der Zahl der Dateien, die häufigsten oben.
+
+1. Markiere die Genres, die zusammengehören, zum Beispiel **Dubstep** und **House**. Mehrere markierst du mit Strg oder Umschalt, auf dem Mac mit Cmd.
+2. Trag unten bei **Markierte zusammenfassen zu** den neuen Namen ein, zum Beispiel `Techno`, oder wähle ein vorhandenes Genre aus der Liste.
+3. Klick **Zusammenfassen**. In der Spalte **wird zu** steht jetzt das neue Genre, darunter, wie viele Dateien sich ändern.
+4. Ist alles richtig, klick **In Dateien schreiben**. Das Programm fragt noch einmal nach und schreibt dann das neue Genre in die Dateien.
+
+| Knopf | Wirkung |
+|---|---|
+| **Zuordnung entfernen** | die markierten Genres bleiben, wie sie sind |
+| **Nur Regeln speichern** | merkt sich die Zuordnungen, ändert aber keine Datei. Sie gelten beim nächsten Schritt 2 mit **Genres vereinheitlichen** |
+| **Regeldatei öffnen** | zeigt die gespeicherten Zuordnungen als Textdatei |
+
+Zuordnungen lassen sich verketten: Wird Dubstep zu Techno und Techno zu Electronic, landet Dubstep in Electronic. Das Schreiben lässt sich im **Verlauf** zurücknehmen.
+
+Die Zuordnungen stehen in der Datei `genre-regeln.json`. Links steht das Genre in Kleinbuchstaben, rechts das Ziel:
 
 ```json
 {
-  "neue deutsche welle": "Pop",
-  "krautrock": "Rock"
+  "dubstep": "Techno",
+  "house": "Techno"
 }
 ```
 
-Die eigenen Regeln gehen der eingebauten Liste vor.
+Die eigenen Regeln gehen bei **Genres vereinheitlichen** der eingebauten Liste vor.
 
 **Wann wird geladen?** Die Vorschau sucht schon online und speichert jeden Treffer, auch Label und CD-Angaben, je Album nur einmal. Sie kann lange dauern, aber „Prüfen und ausführen“ danach geht dann schnell. Cover und Songtexte werden erst beim Ausführen geladen.
 

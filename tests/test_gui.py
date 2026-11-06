@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk
 import unittest
 from argparse import Namespace
+from types import SimpleNamespace
 from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -144,6 +145,24 @@ class Navigation(unittest.TestCase):
         with mock.patch.object(gui.messagebox, "askyesno", return_value=True):
             started[0]["then"]()
         self.assertEqual(self.app.folder.get(), "D:/Sortiert")
+
+    def test_genre_window_merges_and_writes(self):
+        from musicrenamer import genre_window, genres
+        tracks = [SimpleNamespace(genre=g, path=f"{n}.mp3") for n, g in enumerate(("Dubstep", "House", "House", "Rock"))]
+        written = []
+        with mock.patch.object(genres, "load_rules", return_value={"rock": "Dubstep"}),                 mock.patch.object(genres, "save_rules") as save,                 mock.patch.object(genre_window.messagebox, "askyesno", return_value=True):
+            window = genre_window.GenreWindow(self.app, tracks, written.extend)
+            window.tree.selection_set(["Dubstep", "House"])
+            window.target.set("Rock")
+            window._merge()  # Rock zeigte auf Dubstep; das würde ein Kreis, also gilt Rock selbst
+            self.assertEqual(window.tree.set("House", "target"), "Rock")
+            self.assertEqual(window.tree.set("Rock", "target"), "")
+            self.assertIn("3 Dateien bekommen ein neues Genre", window.summary.get())
+            window.tree.selection_set(["Dubstep"])
+            window._unmerge()
+            window._write()
+        self.assertEqual(save.call_args[0][1], {"house": "Rock"})
+        self.assertEqual(sorted((t.path, g) for t, g in written), [("1.mp3", "Rock"), ("2.mp3", "Rock")])
 
     def test_advanced_options_open_and_close(self):
         toggle = next(w for w in self.all_widgets(self.app.pages["tags"])

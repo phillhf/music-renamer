@@ -14,8 +14,9 @@ from types import SimpleNamespace
 
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
-from . import __version__, cli, genres, i18n, journal, system, updater
+from . import __version__, cli, i18n, journal, system, updater
 from .editor import TagEditor
+from .genre_window import GenreWindow
 from .i18n import progress_line, t
 from .job import Cancelled, job
 from .lookup import LEVELS, parse_accuracy
@@ -218,7 +219,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self._button(bottom, t("Verlauf"), lambda: HistoryWindow(self)).pack(side="left")
         ttk.Button(bottom, text=t("Berichte öffnen"), command=self._open_reports).pack(side="left", padx=6)
         self._button(bottom, t("Tag-Editor"), self._open_editor).pack(side="left")
-        ttk.Button(bottom, text=t("Genre-Regeln"), command=self._open_rules).pack(side="left", padx=6)
+        self._button(bottom, t("Genres"), self._open_genres).pack(side="left", padx=6)
         self._button(bottom, t("Neu anfangen"), self._forget).pack(side="left", padx=(0, 6))
         ttk.Button(bottom, text=t("Hilfe"), command=lambda: webbrowser.open(cli.DOCS_URL + "Bedienung.md")).pack(
             side="left", padx=(0, 6))
@@ -303,6 +304,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         # Wer schon einen Key eingetragen hat, sieht ihn gleich
         switch(bool(self.acoustid_key.get() or self.discogs_token.get()))
         self._actions(page, self._tags, "umbenennen")
+        ttk.Label(page, text=t("Nach dem Ausführen siehst du, welche Genres gefunden wurden, und kannst sie zusammenfassen, zum Beispiel Dubstep und House zu Electronic. Später geht das jederzeit über „Genres“ unten."),
+                  style="Info.TLabel", wraplength=640, justify="left").pack(anchor="w", pady=(8, 0))
 
     def _build_rename(self):
         page = self._page("umbenennen", t("Schritt 3: Umbenennen und in Ordner sortieren"),
@@ -465,8 +468,18 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         os.makedirs(cli.REPORT_DIR, exist_ok=True)
         system.open_path(cli.REPORT_DIR)
 
-    def _open_rules(self):
-        system.open_path(genres.ensure_rules_file(cli.APP_DIR))
+    def _open_genres(self):
+        folder = self.folder.get().strip()
+        if not folder:
+            messagebox.showinfo("Music Renamer", t("Bitte zuerst oben die Sammlung auswählen."))
+            return
+        self._run_background(self._load_genres, folder)
+
+    def _load_genres(self, folder):
+        self.events.put(("genres", cli.prepare(Namespace(ordner=folder))[2]))
+
+    def _write_genres(self, changes):
+        self._run_background(cli.write_genres, changes)
 
     def _language_changed(self, event=None):
         self._save()
@@ -516,6 +529,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                 value()
             elif kind == "editor":
                 TagEditor(self, value)
+            elif kind == "genres":
+                GenreWindow(self, value, self._write_genres)
             elif kind == "quit":
                 self.destroy()
                 return
@@ -601,7 +616,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
             messagebox.showerror("Music Renamer", t("Bitte als eigenen Wert eine Zahl von 1 bis 100 eintragen."))
             return
         self._start("tags", cli.cmd_tag, apply, ueberschreiben=self.overwrite.get(), limit=None, genauigkeit=accuracy,
-                    cover=self.cover.get(), songtexte=self.lyrics.get(), genres=self.unify_genres.get())
+                    cover=self.cover.get(), songtexte=self.lyrics.get(), genres=self.unify_genres.get(),
+                    then=self._open_genres)
 
     def _open_editor(self):
         folder = self.folder.get().strip()

@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from test_musicrenamer import Base, make_mp3
 
-from musicrenamer import albums, cli, fingerprint, journal, library, lookup, tags
+from musicrenamer import albums, cli, fingerprint, genres, journal, library, lookup, tags
 from musicrenamer.dupes import find_duplicates
 from musicrenamer.job import Cancelled, job
 
@@ -688,3 +688,36 @@ class ReleaseData(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GenreMerging(Base):
+    def setUp(self):
+        super().setUp()
+        app_dir = mock.patch.object(cli, "APP_DIR", os.path.join(self.tmp.name, "app"))
+        app_dir.start()
+        self.addCleanup(app_dir.stop)
+
+    def test_rules_follow_chains_and_parse(self):
+        rules = genres.parse_merges(["Dubstep, House=Techno", "Techno=Electronic"])
+        self.assertEqual(rules, {"dubstep": "Techno", "house": "Techno", "techno": "Electronic"})
+        self.assertEqual(genres.resolve("DUBSTEP", rules), "Electronic")
+        self.assertEqual(genres.resolve("Rock", rules), "Rock")
+        self.assertEqual(genres.resolve("A", {"a": "B", "b": "A"}), "A")  # Kreis hängt nicht
+        with self.assertRaises(ValueError):
+            genres.parse_merges(["ohne Gleichheitszeichen"])
+
+    def test_list_and_merge_genres_into_files(self):
+        for number, genre in enumerate(("Dubstep", "House", "House", "Rock", "")):
+            make_mp3(self.path(f"{number}.mp3"), number, tags={"artist": "A", "title": str(number), "genre": genre})
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            cli.cmd_genres(Namespace(ordner=self.root, apply=False, zusammenfassen=["Dubstep, House=Techno"]))
+        self.assertIn("3 Dateien bekommen ein neues Genre", output.getvalue())
+        self.assertEqual(genres.load_rules(cli.APP_DIR), {})  # Vorschau speichert nichts
+        self.assertEqual(cli.genre_counts(self.tracks()), {"Dubstep": 1, "House": 2, "Rock": 1, "": 1})
+        with contextlib.redirect_stdout(io.StringIO()):
+            cli.cmd_genres(Namespace(ordner=self.root, apply=True, zusammenfassen=["Dubstep, House=Techno"]))
+        self.assertEqual(cli.genre_counts(self.tracks()), {"Techno": 3, "Rock": 1, "": 1})
+        self.assertEqual(genres.load_rules(cli.APP_DIR), {"dubstep": "Techno", "house": "Techno"})
+        journal.undo_last(cli.DATA_DIR)
+        self.assertEqual(cli.genre_counts(self.tracks()), {"Dubstep": 1, "House": 2, "Rock": 1, "": 1})

@@ -46,3 +46,31 @@ def canonical(genre, rules):
         if keyword in text:
             return target
     return genre.strip()
+
+
+def save_rules(folder, rules):
+    os.makedirs(folder, exist_ok=True)
+    with open(rules_path(folder), "w", encoding="utf-8") as f:
+        json.dump(dict(sorted(rules.items())), f, ensure_ascii=False, indent=2)
+
+
+def resolve(genre, rules):
+    """Das Ziel nach den eigenen Regeln; Ketten wie Dubstep → Techno → Electronic werden verfolgt."""
+    seen = set()
+    while genre.casefold() in rules and genre.casefold() not in seen:
+        seen.add(genre.casefold())
+        genre = rules[genre.casefold()]
+    return genre
+
+
+def parse_merges(texts):
+    """Aus "Dubstep, House=Techno" werden Regeln für Dubstep und House."""
+    rules = {}
+    for text in texts:
+        sources, sep, target = text.rpartition("=")
+        if not sep or not target.strip() or not sources.strip():
+            raise ValueError(text)
+        for source in sources.split(","):
+            if source.strip() and source.strip().casefold() != target.strip().casefold():
+                rules[source.strip().casefold()] = target.strip()
+    return rules

@@ -9,6 +9,7 @@ Alle Befehle und Optionen von Music Renamer an einem Ort. Die Bedienung mit Fens
 - [Übersicht aller Befehle](#übersicht-aller-befehle)
 - [dubletten](#dubletten)
 - [tags](#tags)
+- [genres](#genres)
 - [umbenennen](#umbenennen)
 - [undo](#undo)
 - [vergessen](#vergessen)
@@ -57,6 +58,7 @@ music-renamer-cli tags "/mnt/nas/Meine Musik"
 |---|---|
 | `dubletten ORDNER` | findet Dubletten und verschiebt sie mit `--apply` |
 | `tags ORDNER` | sucht Metadaten und schreibt sie mit `--apply` |
+| `genres ORDNER` | listet alle Genres und fasst sie mit `--zusammenfassen` und `--apply` zusammen |
 | `umbenennen ORDNER` | benennt und sortiert Dateien mit `--apply` |
 | `undo` | nimmt den letzten ausgeführten Schritt zurück |
 | `vergessen` | löscht gespeicherte Suchergebnisse, um von vorn zu beginnen |
@@ -64,7 +66,7 @@ music-renamer-cli tags "/mnt/nas/Meine Musik"
 
 | Option | Befehl | Wirkung |
 |---|---|---|
-| `--apply` | `dubletten`, `tags`, `umbenennen` | führt die Änderungen wirklich aus |
+| `--apply` | `dubletten`, `tags`, `genres`, `umbenennen` | führt die Änderungen wirklich aus |
 | `--ziel ORDNER` | `dubletten` | anderer Zielordner statt `<Sammlung>/Dubletten` |
 | `--klang` | `dubletten` | vergleicht am Klang, langsam |
 | `--aehnlich` | `dubletten` | verschiebt auch ähnliche Treffer |
@@ -74,6 +76,7 @@ music-renamer-cli tags "/mnt/nas/Meine Musik"
 | `--cover` | `tags` | bettet fehlende Cover ein |
 | `--songtexte` | `tags` | bettet fehlende Songtexte ein |
 | `--genres` | `tags` | vereinheitlicht Genres |
+| `--zusammenfassen "A, B=ZIEL"` | `genres` | macht aus A und B das Genre ZIEL, mehrfach möglich |
 | `--muster MUSTER` | `umbenennen` | Aufbau von Dateiname und Ordnern |
 | `--ziel ORDNER` | `umbenennen` | verschiebt alle benennbaren Dateien in diesen Ordner |
 | `--zeitraum N` | `umbenennen` | Jahre je `{zeitraum}`, Standard 5 |
@@ -187,6 +190,47 @@ Eigene Genre-Zuordnungen stehen in der Datei `genre-regeln.json` im [Datenordner
   "krautrock": "Rock"
 }
 ```
+
+## genres
+
+Zeigt, welche Genres die Sammlung hat und wie viele Dateien jeweils, und fasst zusammengehörige Genres zusammen.
+
+```bash
+music-renamer-cli genres ORDNER [--apply] [--zusammenfassen "GENRE, GENRE=ZIEL"]
+```
+
+| Option | Wirkung |
+|---|---|
+| `--zusammenfassen "A, B=ZIEL"` | macht aus den Genres A und B das Genre ZIEL. Groß- und Kleinschreibung zählt nicht. Mehrfach möglich |
+| `--apply` | schreibt das neue Genre in die Dateien und speichert die Zuordnungen in `genre-regeln.json` |
+
+**Beispiele**
+
+Alle Genres auflisten:
+
+```bash
+music-renamer-cli genres ~/Musik
+```
+
+Ausgabe, die häufigsten zuerst:
+
+```
+    812  Hip-Hop
+    220  House  →  Techno
+     96  Dubstep  →  Techno
+```
+
+Erst ansehen, was sich ändern würde, dann ausführen:
+
+```bash
+music-renamer-cli genres ~/Musik --zusammenfassen "Dubstep, House=Techno" --zusammenfassen "Deutschrap=Hip-Hop"
+```
+
+```bash
+music-renamer-cli genres ~/Musik --zusammenfassen "Dubstep, House=Techno" --zusammenfassen "Deutschrap=Hip-Hop" --apply
+```
+
+Gespeicherte Zuordnungen gelten auch später: `genres ~/Musik --apply` ohne `--zusammenfassen` wendet sie auf neu hinzugekommene Dateien an. Zurücknehmen geht mit `undo`. Bericht: `genres.csv`.
 
 ## umbenennen
 
@@ -434,6 +478,7 @@ nohup music-renamer-cli tags ~/Musik --cover --songtexte > lauf.log 2>&1 &
 | `berichte/dubletten.csv` | alle Dubletten mit Aktion |
 | `berichte/tags-vorschau.csv` | geplante Metadaten mit Quelle und Trefferwert |
 | `berichte/nicht-gefunden.csv` | Dateien ohne sicheren Treffer |
+| `berichte/genres.csv` | alle Genres mit Anzahl und neuem Genre |
 | `berichte/umbenennen-vorschau.csv` | alte und neue Namen |
 | `berichte/defekte-dateien.csv` | Dateien, die sich nicht lesen ließen |
 | `data/mp3org.sqlite` | Sammlung und gespeicherte Treffer |

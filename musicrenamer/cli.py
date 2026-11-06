@@ -526,6 +526,69 @@ def cmd_rename_files(args):
     run_renames(args, rows, skipped, None)
 
 
+def genre_counts(tracks):
+    """Wie viele Dateien jedes Genre haben; "" zählt die Dateien ohne Genre."""
+    counts = {}
+    for track in tracks:
+        genre = clean(track.genre)
+        counts[genre] = counts.get(genre, 0) + 1
+    return counts
+
+
+def genre_changes(tracks, rules):
+    """Dateien, deren Genre nach den eigenen Regeln anders heißen soll, mit dem neuen Genre."""
+    changes = []
+    for track in tracks:
+        genre = clean(track.genre)
+        target = genres.resolve(genre, rules) if genre else ""
+        if target and target != genre:
+            changes.append((track, target))
+    return changes
+
+
+def write_genres(changes):
+    journal = journaling.Journal(DATA_DIR, "genres")
+    saved = 0
+    try:
+        for number, (track, target) in enumerate(changes, 1):
+            job.step(number, len(changes), t("Genres schreiben"))
+            try:
+                journal.record(action="tag", path=track.path, old={"genre": track.genre}, new={"genre": target})
+                write_tags(track.path, {"genre": target})
+                track.genre = target
+                saved += 1
+            except Exception as exc:
+                print(t("Fehler bei {path}: {reason}", path=track.path, reason=exc))
+    finally:
+        journal.close()
+        print(t("Genre geändert in {count} Dateien.", count=saved))
+
+
+def cmd_genres(args):
+    root, db, tracks = prepare(args)
+    rules = genres.load_rules(APP_DIR)
+    try:
+        merges = genres.parse_merges(getattr(args, "zusammenfassen", None) or [])
+    except ValueError as exc:
+        sys.exit(t("Ungültige Angabe: {text}. Beispiel: --zusammenfassen „Dubstep, House=Techno“", text=exc))
+    rules.update(merges)
+    counts = genre_counts(tracks)
+    rows = [(genre or t("(ohne Genre)"), count, genres.resolve(genre, rules) if genre else "")
+            for genre, count in sorted(counts.items(), key=lambda item: (not item[0], -item[1], item[0].casefold()))]
+    path = write_report("genres.csv", ("Genre", "Dateien", "wird zu"), rows)
+    for genre, count, target in rows:
+        print(f"{count:>7}  {genre}" + (f"  →  {target}" if target and target != genre else ""))
+    changes = genre_changes(tracks, rules)
+    print(t("{genres} Genres, {count} Dateien bekommen ein neues Genre. Bericht: {path}",
+            genres=len([g for g in counts if g]), count=len(changes), path=path))
+    if not args.apply:
+        print(t("Vorschau: nichts geändert."))
+        return
+    if merges:
+        genres.save_rules(APP_DIR, rules)
+    write_genres(changes)
+
+
 def forget_results(db):
     """Löscht Suchergebnisse, Fingerabdrücke und den gelesenen Stand der Sammlung; der Verlauf bleibt."""
     count = db.execute("SELECT count(*) FROM lookups").fetchone()[0]
@@ -605,6 +668,9 @@ def main():
                         help=f"Jahre je Zeitraum für {{zeitraum}}, Standard {PERIOD_YEARS}")
     rename.add_argument("--ziel", dest="zielordner",
                         help="verschiebt alle benennbaren Dateien in diesen Ordner, der Rest bleibt in der Sammlung")
+    genre = command("genres", cmd_genres, "Genres der Sammlung auflisten und zusammenfassen")
+    genre.add_argument("--zusammenfassen", action="append", metavar='"A, B=ZIEL"',
+                       help='macht aus den Genres A und B das Genre ZIEL, mehrfach möglich')
     undo = commands.add_parser("undo", help="letzten ausgeführten Schritt zurücknehmen", formatter_class=keep_lines,
                                epilog=f"Mehr dazu: {DOCS_URL}Befehlszeile.md#undo")
     undo.set_defaults(handler=cmd_undo)
