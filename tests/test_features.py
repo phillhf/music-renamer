@@ -8,6 +8,7 @@ import ssl
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 import urllib.error
 import urllib.request
 from argparse import Namespace
@@ -409,6 +410,20 @@ class Patterns(Base):
         self.assertEqual(found, ["1980 - 1984/Funk/A - b.mp3", "1980 - 1984/Hip-Hop/A - a.mp3",
                                  f"1980 - 1984/{cli.UNKNOWN_GENRE}/A - e.mp3", "1985 - 1989/Hip-Hop/A - c.mp3",
                                  f"{cli.UNKNOWN_YEAR}/Rap/A - d.mp3"])
+
+    def test_any_order_of_folders(self):
+        track = SimpleNamespace(artist="The Who", title="My Generation", album="", albumartist="", year="1965-10-29",
+                                genre="Rock", track="", disc="2/2", label="", path="x.flac")
+        name = lambda pattern: cli.target_name(track, pattern).replace(os.sep, "/")
+        self.assertEqual(name("{genre}/{buchstabe}/{albumartist}/{year} - {album}/{title}"),
+                         f"Rock/W/The Who/1965 - {cli.UNKNOWN_ALBUM}/My Generation.flac")
+        self.assertEqual(name("{jahrzehnt}/{genre} ({zeitraum})/{disc} - {title}"),
+                         "1960er/Rock (1965 - 1969)/2 - My Generation.flac")
+        self.assertEqual(name("{label}/{title}"), "Unbekanntes Label/My Generation.flac")
+        track.year = ""
+        self.assertEqual(name("{year}/{jahrzehnt}/{title}"), f"{cli.UNKNOWN_YEAR}/{cli.UNKNOWN_YEAR}/My Generation.flac")
+        self.assertEqual(name("{title} {year}"), "My Generation.flac")
+        self.assertEqual([cli.initial(n) for n in ("Die Ärzte", "2Pac", "abba", "")], ["Ä", "#", "A", "#"])
 
     def test_period_length_is_adjustable(self):
         make_mp3(self.path("a.mp3"), 1, tags={"artist": "A", "title": "T", "year": "1987", "genre": "Rock"})

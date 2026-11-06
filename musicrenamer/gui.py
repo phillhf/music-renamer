@@ -25,6 +25,19 @@ SETTINGS_PATH = os.path.join(cli.APP_DIR, "einstellungen.json")
 STEPS = ("dubletten", "tags", "umbenennen")
 QUICK = "schnell"
 NAME_PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist} - {album} - {track} - {title}", "{title}")
+FOLDER_DEPTH = 4
+NO_FOLDER = "–"
+
+
+def saved_levels(settings):
+    """Die Ordnerebenen aus den Einstellungen; bis 0.18 gab es Häkchen, bis 0.15 nur ein Muster."""
+    levels = settings.get("ordner_ebenen")
+    if levels is None and "ordner_zeitraum" in settings:
+        levels = (["{zeitraum}"] * settings["ordner_zeitraum"] + ["{genre}"] * settings.get("ordner_genre", False)
+                  + ["{albumartist}", "{album}"] * settings.get("ordner_album", False))
+    if levels is None:
+        levels = settings.get("muster", "").split("/")[:-1]
+    return [*levels, *[""] * FOLDER_DEPTH][:FOLDER_DEPTH]
 STEP_NAMES = {"dubletten": "Dubletten aussortieren", "tags": "Metadaten ergänzen",
               "umbenennen": "Umbenennen und sortieren"}
 
@@ -124,9 +137,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         # Bis 0.15 gab es nur ein Muster; Ordner darin werden zu den neuen Häkchen
         old = settings.get("muster", cli.PATTERNS[0]).split("/")
         self.file_name = tk.StringVar(value=settings.get("dateiname", old[-1]))
-        self.by_period = tk.BooleanVar(value=settings.get("ordner_zeitraum", "{zeitraum}" in old[:-1]))
-        self.by_genre = tk.BooleanVar(value=settings.get("ordner_genre", "{genre}" in old[:-1]))
-        self.by_album = tk.BooleanVar(value=settings.get("ordner_album", any("{album}" in p for p in old[:-1])))
+        self.levels = [tk.StringVar(value=self._level_label(pattern)) for pattern in saved_levels(settings)]
         self.target_folder = tk.StringVar(value=settings.get("zielordner", ""))
         self.period_years = tk.StringVar(value=str(settings.get("zeitraum_jahre", cli.PERIOD_YEARS)))
         self.language = tk.StringVar(value=next(k for k, v in i18n.LANGUAGES.items() if v == i18n.language))
@@ -307,24 +318,27 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         ttk.Label(form, text=t("Ordner:")).grid(row=2, column=0, sticky="nw", padx=(0, 8), pady=(8, 3))
         folders = ttk.Frame(form)
         folders.grid(row=2, column=1, columnspan=2, sticky="w", pady=(8, 3))
-        period = ttk.Frame(folders)
-        period.pack(anchor="w")
-        ttk.Checkbutton(period, text=t("Nach Zeitraum, zum Beispiel 1980 - 1984, mit"),
-                        variable=self.by_period).pack(side="left")
+        choices = [NO_FOLDER, *(t(label) for label, _ in cli.FOLDER_LEVELS)]
+        for number, level in enumerate(self.levels):
+            if number:
+                ttk.Label(folders, text="›").pack(side="left", padx=4)
+            ttk.Combobox(folders, textvariable=level, values=choices, width=16).pack(side="left")
+        ttk.Label(form, text=t("Wähle von links nach rechts, welche Ordner ineinander entstehen. Mit „–“ fällt eine Ebene weg, ganz ohne Ebenen landen alle Dateien direkt im Zielordner. Du kannst auch eigene Namen tippen, zum Beispiel {example}.", example="{genre} ({jahrzehnt})"),
+                  style="Info.TLabel", wraplength=620, justify="left").grid(row=3, column=1, columnspan=2, sticky="w")
+        period = ttk.Frame(form)
+        period.grid(row=4, column=1, columnspan=2, sticky="w", pady=(6, 0))
+        ttk.Label(period, text=t("Ein Zeitraum umfasst")).pack(side="left")
         ttk.Spinbox(period, textvariable=self.period_years, from_=1, to=100, width=4).pack(side="left", padx=4)
-        ttk.Label(period, text=t("Jahren je Ordner")).pack(side="left")
-        ttk.Checkbutton(folders, text=t("Darin nach Genre"), variable=self.by_genre).pack(anchor="w", pady=2)
-        ttk.Checkbutton(folders, text=t("Darin nach Interpret und Album"), variable=self.by_album).pack(anchor="w")
-        ttk.Label(folders, text=t("Ohne Häkchen landen alle Dateien direkt im Zielordner."), style="Info.TLabel").pack(
-            anchor="w", pady=(2, 0))
-        ttk.Label(form, text=t("Dateiname:")).grid(row=3, column=0, sticky="w", padx=(0, 8), pady=(8, 3))
+        ttk.Label(period, text=t("Jahre, zum Beispiel 1980 - 1984")).pack(side="left")
+        ttk.Label(form, text=t("Dateiname:")).grid(row=5, column=0, sticky="w", padx=(0, 8), pady=(8, 3))
         ttk.Combobox(form, textvariable=self.file_name, values=NAME_PATTERNS).grid(
-            row=3, column=1, columnspan=2, sticky="ew", pady=(8, 3))
+            row=5, column=1, columnspan=2, sticky="ew", pady=(8, 3))
+        ttk.Label(form, text=t("Platzhalter: {fields}", fields=" ".join(f"{{{f}}}" for f in cli.PLACEHOLDERS)),
+                  style="Info.TLabel", wraplength=620, justify="left").grid(row=6, column=1, columnspan=2, sticky="w")
         self.example = tk.StringVar()
         ttk.Label(form, textvariable=self.example, style="Info.TLabel").grid(
-            row=4, column=0, columnspan=3, sticky="w", pady=(6, 0))
-        for variable in (self.file_name, self.by_period, self.by_genre, self.by_album, self.period_years,
-                         self.target_folder, self.folder):
+            row=7, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        for variable in (self.file_name, *self.levels, self.period_years, self.target_folder, self.folder):
             variable.trace_add("write", self._update_example)
         self._update_example()
         self._actions(page, self._rename)
@@ -336,12 +350,24 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                                    padding=50)
         self.drop_zone.pack(fill="x", pady=(6, 0))
 
+    @staticmethod
+    def _level_label(pattern):
+        """Zeigt bekannte Ebenen mit Namen, eigene Muster so, wie sie getippt wurden."""
+        known = {p: t(label) for label, p in cli.FOLDER_LEVELS}
+        return known.get(pattern, pattern) if pattern else NO_FOLDER
+
+    @staticmethod
+    def _level_pattern(text):
+        text = text.strip()
+        known = {t(label).lower(): p for label, p in cli.FOLDER_LEVELS}
+        return "" if text in ("", NO_FOLDER, "-") else known.get(text.lower(), text.replace("/", "-"))
+
+    def _folder_patterns(self):
+        return [p for p in (self._level_pattern(level.get()) for level in self.levels) if p]
+
     def _pattern(self):
-        """Das Muster aus den Häkchen und dem Dateinamen, wie es cli.target_name versteht."""
-        folders = ["{zeitraum}"] * self.by_period.get() + ["{genre}"] * self.by_genre.get()
-        if self.by_album.get():
-            folders += ["{albumartist}", "{album}"]
-        return "/".join([*folders, self.file_name.get().strip() or NAME_PATTERNS[0]])
+        """Das Muster aus den Ordnerebenen und dem Dateinamen, wie es cli.target_name versteht."""
+        return "/".join([*self._folder_patterns(), self.file_name.get().strip() or NAME_PATTERNS[0]])
 
     def _update_example(self, *unused):
         """Zeigt am Beispiel, wohin eine Datei mit dem aktuellen Muster käme."""
@@ -540,8 +566,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                     "eigene_genauigkeit": self.custom_accuracy.get().strip(),
                     "cover": self.cover.get(), "songtexte": self.lyrics.get(), "genres": self.unify_genres.get(),
                     "muster": self._pattern(), "dateiname": self.file_name.get().strip(),
-                    "ordner_zeitraum": self.by_period.get(), "ordner_genre": self.by_genre.get(),
-                    "ordner_album": self.by_album.get(), "zielordner": self.target_folder.get().strip(),
+                    "ordner_ebenen": self._folder_patterns(), "zielordner": self.target_folder.get().strip(),
                     "zeitraum_jahre": self._period_years(quiet=True) or cli.PERIOD_YEARS,
                     "sprache": i18n.LANGUAGES[self.language.get()], "status": self.status}
         save_settings(settings)

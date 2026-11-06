@@ -210,11 +210,13 @@ Verfügbare Platzhalter:
 | `{title}` | Titel | Datei wird übersprungen |
 | `{album}` | Album | wird zu „Unbekanntes Album“ |
 | `{albumartist}` | Album-Interpret | nimmt `{artist}` |
-| `{year}` | Jahr | bleibt leer |
+| `{year}` | Jahr, nur die Jahreszahl | bleibt leer, als Ordner „Unbekanntes Jahr“ |
 | `{genre}` | Genre, bei mehreren wie „Hip-Hop; Rap“ das erste | wird zu „Unbekanntes Genre“ |
-| `{disc}` | CD-Nummer, zum Beispiel `1/2` | bleibt leer |
-| `{label}` | Label | bleibt leer |
+| `{disc}` | CD-Nummer, zum Beispiel `2` | bleibt leer |
+| `{label}` | Label | bleibt leer, als Ordner „Unbekanntes Label“ |
 | `{zeitraum}` | Zeitraum aus dem Jahr, zum Beispiel `1980 - 1984` | wird zu „Unbekanntes Jahr“ |
+| `{jahrzehnt}` | Jahrzehnt, zum Beispiel `1980er` | wird zu „Unbekanntes Jahr“ |
+| `{buchstabe}` | Anfangsbuchstabe des Album-Interpreten, „The Who“ unter `W`, Ziffern unter `#` | – |
 | `{track}` | Tracknummer, immer zweistellig: `03` | bleibt leer |
 
 Ein `/` im Muster erzeugt Ordner, dann wird die **ganze Sammlung** ab dem angegebenen Ordner neu sortiert und leere Ordner werden entfernt. Ohne `/` bleibt jede Datei in ihrem Ordner, Standard ist `{artist} - {title}`.
@@ -225,6 +227,11 @@ Ein `/` im Muster erzeugt Ordner, dann wird die **ganze Sammlung** ab dem angege
 | `{track} - {title}` | `11 - Bohemian Rhapsody.mp3` |
 | `{artist}/{album}/{track} - {title}` | `Queen/A Night at the Opera/11 - Bohemian Rhapsody.mp3` |
 | `{albumartist}/{year} - {album}/{track} - {title}` | `Queen/1975 - A Night at the Opera/11 - Bohemian Rhapsody.mp3` |
+| `{genre}/{albumartist}/{album}/{track} - {title}` | `Rock/Queen/A Night at the Opera/11 - Bohemian Rhapsody.mp3` |
+| `{buchstabe}/{albumartist}/{title}` | `Q/Queen/Bohemian Rhapsody.mp3` |
+| `{genre} ({jahrzehnt})/{artist} - {title}` | `Rock (1970er)/Queen - Bohemian Rhapsody.mp3` |
+
+Jeder Teil zwischen zwei `/` ist ein Ordner, die Reihenfolge bestimmst du frei. Ergibt ein Ordnerteil nichts, etwa `{label}` ohne Label, heißt der Ordner „Unbekanntes …“, die Datei wird trotzdem einsortiert.
 
 Zeichen, die Dateisysteme nicht erlauben, werden entfernt. Ist ein Name schon vergeben, kommt ` (2)` dazu. Vorhandene Dateien werden nie überschrieben.
 

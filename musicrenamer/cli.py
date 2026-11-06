@@ -59,7 +59,15 @@ Alle Befehle mit Beispielen: {DOCS_URL}Befehlszeile.md
 """
 PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist}/{album}/{track} - {title}",
             "{albumartist}/{year} - {album}/{track} - {title}", "{zeitraum}/{genre}/{artist} - {title}")
-PLACEHOLDERS = (*TAG_FIELDS, "zeitraum")
+PLACEHOLDERS = (*TAG_FIELDS, "zeitraum", "jahrzehnt", "buchstabe")
+# Was die Oberfläche als Ordnerebene anbietet; eigene Muster aus PLACEHOLDERS gehen genauso
+FOLDER_LEVELS = (("Zeitraum", "{zeitraum}"), ("Jahrzehnt", "{jahrzehnt}"), ("Jahr", "{year}"),
+                 ("Genre", "{genre}"), ("Interpret", "{albumartist}"), ("Interpret des Titels", "{artist}"),
+                 ("Anfangsbuchstabe", "{buchstabe}"), ("Album", "{album}"), ("Jahr - Album", "{year} - {album}"),
+                 ("Label", "{label}"))
+# Ein leerer Ordnername wird hierzu, damit die Datei trotzdem einsortiert wird
+UNKNOWN_FOLDER = {"year": UNKNOWN_YEAR, "zeitraum": UNKNOWN_YEAR, "jahrzehnt": UNKNOWN_YEAR,
+                  "genre": UNKNOWN_GENRE, "album": UNKNOWN_ALBUM, "label": "Unbekanntes Label"}
 
 
 def write_report(name, header, rows):
@@ -357,6 +365,18 @@ def period(year, years=PERIOD_YEARS):
     return str(start) if years == 1 else f"{start} - {start + years - 1}"
 
 
+def decade(year):
+    found = re.search(r"\d{4}", year or "")
+    return f"{int(found[0]) // 10 * 10}er" if found else UNKNOWN_YEAR
+
+
+def initial(name):
+    """Anfangsbuchstabe für Ordner wie „A“; „The Who“ steht unter W, Ziffern und Zeichen unter #."""
+    name = re.sub(r"(?i)^(the|die|der|das)\s+", "", name.strip())
+    first = name[:1].upper()
+    return first if first.isalpha() else "#"
+
+
 def target_name(track, pattern, years=PERIOD_YEARS):
     values = {f: clean(getattr(track, f)) for f in TAG_FIELDS}
     if not (values["artist"] and values["title"]):
@@ -367,10 +387,19 @@ def target_name(track, pattern, years=PERIOD_YEARS):
     # Bei mehreren Genres wie "Hip-Hop; Rap" zählt das erste, sonst entstünde ein Ordner je Kombination
     values["genre"] = re.split(r"\s*[;/,|]\s*", values["genre"])[0] or UNKNOWN_GENRE
     values["zeitraum"] = period(values["year"], years)
+    values["jahrzehnt"] = decade(values["year"])
+    values["buchstabe"] = initial(values["albumartist"])
+    found = re.search(r"\d{4}", values["year"])  # Tags enthalten auch "1984-05-01"
+    values["year"] = found[0] if found else ""
     values["track"] = values["track"].split("/")[0].zfill(2) if values["track"] else ""
+    values["disc"] = values["disc"].split("/")[0]
     # Fehlt z. B. die Tracknummer, soll kein Name mit " - " beginnen
-    parts = [safe_filename(p.format(**values)).strip(" -") for p in pattern.split("/")]
-    return os.path.join(*parts) + os.path.splitext(track.path)[1].lower() if all(parts) else None
+    *folders, file_name = [safe_filename(p.format(**values)).strip(" -") for p in pattern.split("/")]
+    for number, part in enumerate(folders):
+        if not part:  # Ordner ohne Angabe, etwa ohne Jahr oder Label
+            used = re.findall(r"\{(\w+)\}", pattern.split("/")[number])
+            folders[number] = UNKNOWN_FOLDER.get(used[0] if used else "", "Unbekannt")
+    return os.path.join(*folders, file_name) + os.path.splitext(track.path)[1].lower() if file_name else None
 
 
 def remove_empty_folders(folder, root):

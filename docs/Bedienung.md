@@ -167,15 +167,33 @@ Die eigenen Regeln gehen der eingebauten Liste vor.
 
 **Zielordner:** Bleibt das Feld leer, bleibt alles in der Sammlung. Wählst du einen Ordner, zum Beispiel `D:\Musik sortiert`, wandern alle Dateien mit Interpret und Titel dorthin. Dateien ohne Interpret oder Titel bleiben in der Sammlung. Danach fragt das Programm, ob es den Zielordner als neue Sammlung übernehmen soll, damit die nächsten Schritte dort arbeiten.
 
-**Ordner:** Alle drei sind freiwillig und lassen sich kombinieren. Ohne Häkchen landen alle Dateien direkt im Zielordner.
+**Ordner:** Du bestimmst selbst, welche Ordner entstehen und in welcher Reihenfolge. Dafür gibt es vier Ebenen nebeneinander, von links nach rechts ineinander. Jede Ebene wählst du aus der Liste, mit „–“ fällt sie weg. Ganz ohne Ebenen landen alle Dateien direkt im Zielordner.
 
-| Häkchen | Ordner |
+| Ebene | Ordner | Wenn die Angabe fehlt |
+|---|---|---|
+| **Zeitraum** | `1980 - 1984`. Wie viele Jahre ein Zeitraum umfasst, stellst du darunter ein, Standard ist 5 | „Unbekanntes Jahr“ |
+| **Jahrzehnt** | `1980er` | „Unbekanntes Jahr“ |
+| **Jahr** | `1986` | „Unbekanntes Jahr“ |
+| **Genre** | `Funk`, `Hip-Hop` | „Unbekanntes Genre“ |
+| **Interpret** | Album-Interpret, bei Samplern „Various Artists“, so bleibt ein Album zusammen | nimmt den Interpreten des Titels |
+| **Interpret des Titels** | der Interpret jedes einzelnen Titels, Sampler werden aufgeteilt | – |
+| **Anfangsbuchstabe** | `Q` für Queen, „The Who“ unter `W`, Ziffern unter `#` | – |
+| **Album** | `A Night at the Opera` | „Unbekanntes Album“ |
+| **Jahr - Album** | `1975 - A Night at the Opera`, so stehen Alben eines Interpreten nach Jahren sortiert | nur das Album |
+| **Label** | `EMI` | „Unbekanntes Label“ |
+
+Ein paar Beispiele:
+
+| Ebenen | Ergebnis |
 |---|---|
-| **Nach Zeitraum** | `1980 - 1984`. Wie viele Jahre ein Ordner umfasst, stellst du daneben ein, Standard ist 5, mit 10 entstehen Jahrzehnte. Ohne Jahr: „Unbekanntes Jahr“ |
-| **Darin nach Genre** | `Funk`, `Hip-Hop`. Ohne Genre: „Unbekanntes Genre“ |
-| **Darin nach Interpret und Album** | `Queen\A Night at the Opera`. Bei Samplern steht dort „Various Artists“, ohne Album „Unbekanntes Album“ |
+| Genre › Interpret › Album | `Rock\Queen\A Night at the Opera\` |
+| Anfangsbuchstabe › Interpret › Jahr - Album | `Q\Queen\1975 - A Night at the Opera\` |
+| Jahrzehnt › Genre | `1970er\Rock\` |
+| Interpret | `Queen\` |
 
-Mit allen drei Häkchen und einem Zielordner entsteht zum Beispiel:
+**Eigene Ordnernamen:** Du kannst in eine Ebene auch selbst etwas tippen, mit den Platzhaltern aus der Tabelle weiter unten. `{genre} ({jahrzehnt})` ergibt zum Beispiel `Rock (1970er)`. So lässt sich jede Ordnerstruktur bauen, ohne dass das Programm geändert werden muss. Was du einträgst, merkt sich das Programm.
+
+Mit Zeitraum › Genre › Interpret › Album und einem Zielordner entsteht zum Beispiel:
 
 ```
 Musik sortiert\
@@ -198,16 +216,18 @@ Jedes Genre aus den Tags bekommt einen eigenen Ordner, auch seltene wie „Synth
 | `{title}` | Titel | Datei wird übersprungen |
 | `{album}` | Album | wird zu „Unbekanntes Album“ |
 | `{albumartist}` | Album-Interpret | nimmt den Interpreten |
-| `{year}` | Jahr | bleibt leer |
+| `{year}` | Jahr, nur die Jahreszahl | bleibt leer, als Ordner „Unbekanntes Jahr“ |
 | `{genre}` | Genre, bei mehreren wie „Hip-Hop; Rap“ das erste | wird zu „Unbekanntes Genre“ |
 | `{zeitraum}` | Zeitraum aus dem Jahr, zum Beispiel `1980 - 1984` | wird zu „Unbekanntes Jahr“ |
+| `{jahrzehnt}` | Jahrzehnt, zum Beispiel `1980er` | wird zu „Unbekanntes Jahr“ |
+| `{buchstabe}` | Anfangsbuchstabe des Album-Interpreten, „The Who“ unter `W`, Ziffern unter `#` | – |
 | `{track}` | Tracknummer, immer zweistellig: `03` | bleibt leer |
-| `{disc}` | CD-Nummer, zum Beispiel `1/2` | bleibt leer |
-| `{label}` | Label | bleibt leer |
+| `{disc}` | CD-Nummer, zum Beispiel `2` | bleibt leer |
+| `{label}` | Label | bleibt leer, als Ordner „Unbekanntes Label“ |
 
 Unter den Einstellungen zeigt das Programm an einem Beispiel, wohin eine Datei käme. So siehst du die Wirkung, bevor du etwas startest.
 
-**Ohne Zielordner und ohne Häkchen** bleibt jede Datei in ihrem Ordner und wird nur umbenannt. Mit einem Häkchen wird die ganze Sammlung neu sortiert, und leere Ordner werden entfernt.
+**Ohne Zielordner und ohne Ebenen** bleibt jede Datei in ihrem Ordner und wird nur umbenannt. Mit mindestens einer Ebene wird die ganze Sammlung neu sortiert, und leere Ordner werden entfernt.
 
 Die Dateien werden verschoben, nicht kopiert. Auf demselben Laufwerk geht das sofort, auf ein anderes Laufwerk muss jede Datei kopiert werden, das dauert bei großen Sammlungen deutlich länger. Bricht dabei eine Kopie ab, etwa weil der Datenträger voll ist, bleibt die Datei an ihrem alten Platz, und es bleibt keine halbe Kopie zurück. Der Zielordner darf nicht im Dubletten-Ordner liegen.
 

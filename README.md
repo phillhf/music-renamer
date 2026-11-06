@@ -40,7 +40,7 @@ Gelöscht wird nie etwas: Dubletten werden nur verschoben, und jeder Schritt lä
 - **Metadaten ergänzen:** Interpret, Titel, Album, Album-Interpret, Jahr, Genre, Track- und CD-Nummer und Label aus [MusicBrainz](https://musicbrainz.org), der iTunes-Suche und optional [Discogs](https://www.discogs.com)
 - **Cover und Songtexte einbetten:** aus dem [Cover Art Archive](https://coverartarchive.org) und von [LRCLIB](https://lrclib.net)
 - **Am Klang erkennen:** auch Dateien ohne Tags und ohne brauchbaren Namen, über [AcoustID](https://acoustid.org), ohne dass du etwas einrichten musst
-- **Umbenennen und sortieren:** nach frei wählbarem Muster, auf Wunsch in Ordner nach Interpret und Album oder nach Zeitraum wie 1980 - 1984 und Genre, auch in einen eigenen Zielordner
+- **Umbenennen und sortieren:** nach frei wählbarem Muster, in bis zu vier Ordnerebenen in beliebiger Reihenfolge, etwa Genre, Interpret, Album, Jahr, Jahrzehnt, Zeitraum wie 1980 - 1984, Anfangsbuchstabe oder Label, auch mit eigenen Ordnernamen und in einen eigenen Zielordner
 - **Dateien ins Fenster ziehen:** direkt umbenennen, ohne Sammlung
 - **Prüfansicht, Tag-Editor, Verlauf:** jede Änderung vorher sehen, von Hand korrigieren und zurücknehmen
 - **Für große Sammlungen gebaut:** Treffer werden sofort gespeichert, und bei Verbindungsabbrüchen pausiert der Lauf und macht von selbst weiter

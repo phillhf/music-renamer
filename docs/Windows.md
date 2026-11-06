@@ -32,7 +32,7 @@ Eine vorhandene Installation erkennt das Setup und aktualisiert sie. Das gilt au
 Für Administratoren gibt es ein stilles Setup:
 
 ```powershell
-.\Music-Renamer-Setup-0.18.0.exe /VERYSILENT /DIR="D:\Music Renamer" /TASKS="desktopicon,cli"
+.\Music-Renamer-Setup-0.19.0.exe /VERYSILENT /DIR="D:\Music Renamer" /TASKS="desktopicon,cli"
 ```
 
 ## Erster Start
@@ -136,7 +136,7 @@ setx DISCOGS_TOKEN "dein-token"
 | Problem | Lösung |
 |---|---|
 | SmartScreen lässt das Setup nicht starten | **Weitere Informationen**, dann **Trotzdem ausführen**. Wird das Blockieren von deiner Firma verwaltet, frage die IT |
-| Das Antivirenprogramm meldet das Setup | Unsignierte Programme werden manchmal fälschlich gemeldet. Die Prüfsumme steht in der `.sha256`-Datei auf der Release-Seite, prüfen kannst du sie mit `Get-FileHash .\Music-Renamer-Setup-0.18.0.exe` |
+| Das Antivirenprogramm meldet das Setup | Unsignierte Programme werden manchmal fälschlich gemeldet. Die Prüfsumme steht in der `.sha256`-Datei auf der Release-Seite, prüfen kannst du sie mit `Get-FileHash .\Music-Renamer-Setup-0.19.0.exe` |
 | Dateien lassen sich nicht ändern | Schließe Player, die die Musik gerade nutzen, und prüfe, ob die Dateien schreibgeschützt sind. Das Programm meldet solche Dateien im Protokoll und läuft weiter |
 | Pfad zu lang | Sehr tiefe Ordner können die Grenze von Windows überschreiten. Nutze ein kürzeres Muster oder einen kürzeren Sammlungsordner |
 | `music-renamer-cli` wird nicht erkannt | Öffne ein neues Terminal. Hilft das nicht, starte das Setup erneut und prüfe das Häkchen **Befehlszeile hinzufügen** |
