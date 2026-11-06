@@ -9,7 +9,9 @@ JUNK_VALUES = {"", "unknown", "unknown artist", "unknown album", "unbekannt",
                "other", "others", "misc", "miscellaneous", "sonstige", "sonstiges", "genre", "unknown genre"}
 JUNK_PATTERN = re.compile(r"^(track|titel|audiotrack|spur)\s*\d*$|https?://|www\.|\.(com|net|org|ru)\b", re.I)
 GENERIC_FOLDERS = {"music", "musik", "mp3", "mp3s", "downloads", "download", "neuer ordner",
-                   "new folder", "sammlung", "various", "various artists", "unsorted", "sonstiges"}
+                   "new folder", "sammlung", "various", "various artists", "unsorted", "sonstiges",
+                   "ipod", "ipod music", "itunes", "itunes music", "itunes media", "media", "audio", "songs",
+                   "lieder", "meine musik", "eigene musik", "my music", "dubletten"}
 NOISE_BRACKET = re.compile(
     r"[\(\[\{][^\)\]\}]*(official|lyrics?|video|audio|hq|hd|\d{3}\s*kbps|www\.|\.com|\.net|free download)"
     r"[^\)\]\}]*[\)\]\}]", re.I)
@@ -66,7 +68,8 @@ def parse_filename(path):
     folders = os.path.normpath(path).split(os.sep)[:-1]
     for folder in reversed(folders[-2:]):
         # Ordner wie "Album (1999)" oder "1999 - Album" sind kein Interpret
-        if folder.lower() not in GENERIC_FOLDERS and not re.search(r"\d{4}|^cd\s*\d", folder, re.I):
+        # Laufwerke wie "C:" sind kein Interpret
+        if folder and not folder.endswith(":") and folder.lower() not in GENERIC_FOLDERS                 and not re.search(r"\d{4}|^cd\s*\d", folder, re.I):
             return folder, stem
     return "", stem
 

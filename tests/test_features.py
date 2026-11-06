@@ -566,6 +566,45 @@ class MoreMetadata(Base):
                          ("4/12", "2/2", "Sony", "Various Artists"))
         self.assertEqual(get.call_count, 1)  # gespeichert, kein zweiter Abruf
 
+    def test_year_from_old_id3v1_block(self):
+        make_mp3(self.path("x.mp3"), 1, tags={"artist": "A", "title": "T"})
+        block = b"TAG" + b"Titel".ljust(30, b"\0") + b"Band".ljust(30, b"\0") + b"Album".ljust(30, b"\0") \
+            + b"2002" + bytes(30) + bytes([17])
+        with open(self.path("x.mp3"), "ab") as f:
+            f.write(block)
+        values = library.read_file(self.path("x.mp3"))
+        self.assertEqual((values["artist"], values["title"], values["year"], values["album"], values["genre"]),
+                         ("A", "T", "2002", "Album", "Rock"))
+
+    def test_rejected_acoustid_key_turns_sound_off_once(self):
+        db = sqlite3.connect(":memory:")
+        db.execute("CREATE TABLE lookups (key TEXT PRIMARY KEY, result TEXT)")
+        with mock.patch.dict(os.environ, {"ACOUSTID_KEY": "falsch"}), \
+                mock.patch.object(lookup, "find_fpcalc", return_value="fpcalc"):
+            finder = lookup.Lookup(db)
+        rejected = urllib.error.HTTPError("u", 400, "Bad Request", None,
+                                          io.BytesIO(b'{"error": {"code": 4, "message": "invalid API key"}}'))
+        make_mp3(self.path("x.mp3"), 1)
+        with mock.patch.object(lookup, "_search_mb", return_value=None), \
+                mock.patch.object(lookup.subprocess, "run",
+                                  return_value=mock.Mock(returncode=0, stdout='{"duration": 20, "fingerprint": "AQ"}')), \
+                mock.patch.object(urllib.request, "urlopen", side_effect=rejected), \
+                contextlib.redirect_stdout(io.StringIO()) as log:
+            self.assertIsNone(finder.find(self.path("x.mp3"), "A", "T", 20))
+            self.assertIsNone(finder.find(self.path("x.mp3"), "A", "T", 20))
+        self.assertIsNone(finder.fpcalc)
+        self.assertEqual(log.getvalue().count("lehnt den eingetragenen Key ab"), 1)
+
+    def test_service_reason_is_shown(self):
+        refused = urllib.error.HTTPError("u", 400, "Bad Request", None, io.BytesIO(b'{"error": {"message": "zu kurz"}}'))
+        with mock.patch.object(urllib.request, "urlopen", side_effect=refused), \
+                self.assertRaisesRegex(urllib.error.HTTPError, "zu kurz"):
+            lookup._fetch("https://musicbrainz.org/ws/2/x", 0)
+
+    def test_collection_folder_is_no_artist(self):
+        from musicrenamer import names
+        self.assertEqual(names.parse_filename(r"C:\Ipod Music\- 05-im_stau.mp3")[0], "")
+
     def test_placeholder_genre_counts_as_empty(self):
         from musicrenamer import names
         self.assertEqual(names.clean("Other"), "")

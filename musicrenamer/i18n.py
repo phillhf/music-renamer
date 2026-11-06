@@ -8,6 +8,8 @@ EN = {
     "Abbrechen": "Cancel",
     "Abbruch: {reason}. Bisherige Treffer sind gespeichert, einfach erneut starten.": "Stopped: {reason}. Results so far are saved, just start again.",
     "Hilfe": "Help",
+    "AcoustID lehnt den eingetragenen Key ab. Nötig ist der Key einer Anwendung, nicht der persönliche Benutzer-Key. Die Suche läuft ohne Klangerkennung weiter.": "AcoustID rejects the key you entered. It needs the key of an application, not your personal user key. The search continues without sound recognition.",
+    "AcoustID: Lege dort eine Anwendung an und nimm deren Key. Der persönliche Benutzer-Key wird abgelehnt.": "AcoustID: create an application there and use its key. Your personal user key is rejected.",
     "Ordner:": "Folders:",
     "Nach Zeitraum, zum Beispiel 1980 - 1984, mit": "By period, for example 1980 - 1984, with",
     "Jahren je Ordner": "years per folder",

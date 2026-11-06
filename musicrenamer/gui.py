@@ -281,6 +281,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         link.bind("<Button-1>", lambda event: webbrowser.open(ACOUSTID_KEY_URL))
         ttk.Label(key_row, text=t("Discogs-Token:")).pack(side="left", padx=(14, 4))
         ttk.Entry(key_row, textvariable=self.discogs_token, width=18, show="*").pack(side="left")
+        ttk.Label(advanced, text=t("AcoustID: Lege dort eine Anwendung an und nimm deren Key. Der persönliche Benutzer-Key wird abgelehnt."),
+                  style="Info.TLabel").pack(anchor="w", pady=(4, 0))
 
         label = t("Erweitert: Klangerkennung und Discogs")
 

@@ -70,6 +70,19 @@ def _online():
         return False
 
 
+class InvalidKey(Exception):
+    """AcoustID lehnt den Key ab, meist weil der Benutzer-Key statt des Anwendungs-Keys eingetragen ist."""
+
+
+def _service_message(exc):
+    """Die Begründung, die ein Dienst einer Ablehnung mitgibt, etwa "invalid API key"."""
+    try:
+        error = json.loads(exc.read()).get("error")
+    except Exception:
+        return ""
+    return str(error.get("message", "") if isinstance(error, dict) else error or "")
+
+
 def _report_back(host, paused):
     if paused:
         print(t("Verbindung zu {host} wieder da nach {time}, es geht weiter.", host=host, time=format_duration(time.monotonic() - paused)))
@@ -103,6 +116,9 @@ def _fetch(url, min_interval, data=None, headers=None, check=None, optional=Fals
                 _report_back(host, paused)
                 return None
             if exc.code not in RETRY_CODES:
+                detail = _service_message(exc)
+                if detail:
+                    exc.msg = f"{exc.msg}, {host}: {detail}"
                 if optional:
                     raise ConnectionError(f"{host}: {exc}") from exc
                 raise
@@ -316,7 +332,12 @@ def _acoustid(path, api_key, fpcalc):
     body = urllib.parse.urlencode({
         "client": api_key, "duration": int(fingerprint["duration"]),
         "fingerprint": fingerprint["fingerprint"], "meta": "recordingids"}).encode()
-    data = _get("https://api.acoustid.org/v2/lookup", 0.4, data=body) or {}
+    try:
+        data = _get("https://api.acoustid.org/v2/lookup", 0.4, data=body) or {}
+    except urllib.error.HTTPError as exc:
+        if "invalid api key" in str(exc).lower():
+            raise InvalidKey() from exc
+        raise
     # Die Schwelle wird erst beim Lesen angewendet, damit ein Stufenwechsel ohne neue Analyse geht
     for result in sorted(data.get("results", []), key=lambda r: -r.get("score", 0)):
         if result.get("recordings"):
@@ -403,7 +424,13 @@ class Lookup:
         key = f"acoustid:{audio_key(path)}"
         entry = self.cache.get(key)
         if not entry:
-            score, recording = _acoustid(path, self.api_key, self.fpcalc)
+            try:
+                score, recording = _acoustid(path, self.api_key, self.fpcalc)
+            except InvalidKey:
+                # Einmal melden und ohne Klangerkennung weitersuchen, statt jede Datei scheitern zu lassen
+                print(t("AcoustID lehnt den eingetragenen Key ab. Nötig ist der Key einer Anwendung, nicht der persönliche Benutzer-Key. Die Suche läuft ohne Klangerkennung weiter."))
+                self.fpcalc = None
+                return None
             entry = {"score": score, "result": self._details(recording, "acoustid", score) if recording else {}}
             self.cache.set(key, entry)
         if not entry["result"]:

@@ -10,6 +10,7 @@ import sqlite3
 from dataclasses import dataclass
 
 from mutagen.flac import FLAC
+from mutagen.id3 import ParseID3v1
 from mutagen.mp3 import MP3
 
 from . import system
@@ -129,6 +130,27 @@ def audio_key(path):
     return f"{length}:{hash_audio(path, start, min(length, KEY_SAMPLE))}"
 
 
+def _fill_from_id3v1(path, values):
+    """Ergänzt leere Felder aus dem alten ID3v1-Block am Dateiende, den Windows ebenfalls anzeigt."""
+    with open(path, "rb") as f:
+        f.seek(0, os.SEEK_END)
+        if f.tell() < 128:
+            return
+        f.seek(-128, os.SEEK_END)
+        block = f.read(128)
+    frames = ParseID3v1(block) or {}
+    old = {"artist": "TPE1", "title": "TIT2", "album": "TALB", "year": "TDRC", "genre": "TCON", "track": "TRCK"}
+    for field, frame_id in old.items():
+        frame = frames.get(frame_id)
+        if values.get(field) or frame is None:
+            continue
+        text = frame.genres[0] if frame_id == "TCON" and frame.genres else str(frame.text[0] if frame.text else "")
+        text = text.strip()
+        if field == "year":
+            text = text[:4] if text[:4].isdigit() else ""
+        values[field] = text
+
+
 def read_file(path):
     audio = open_audio(path)
     values = read_tags(audio)
@@ -136,6 +158,7 @@ def read_file(path):
                   audio_hash=None)
     if isinstance(audio, MP3):
         values["audio_start"], values["audio_size"] = audio_range(path)
+        _fill_from_id3v1(path, values)
     else:
         # Nur MP3 lässt sich hier von den Tags trennen; sonst zählt die ganze Datei
         values["audio_start"], values["audio_size"] = 0, os.path.getsize(path)

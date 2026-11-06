@@ -131,7 +131,9 @@ Das Programm liest Interpret und Titel aus den Tags, sonst aus dem Dateinamen. A
 
 **Mehrere Interpreten:** Steht im Tag eine Liste wie `Dr. Dre/Nate Dogg/Snoop Dogg`, sucht das Programm mit dem ersten Interpreten und ersetzt die Liste durch die Schreibweise von MusicBrainz, zum Beispiel `Dr. Dre feat. Snoop Dogg`. Das passiert auch ohne **Vorhandene Tags ersetzen**. Gäste im Titel wie „Stan (ft. Dido)“ stören die Suche nicht.
 
-**Jahr:** Eingetragen wird das Jahr der ersten Veröffentlichung der gefundenen Aufnahme. Passt deine Datei zu einer späteren Fassung, etwa einer Neuaufnahme, steht dort deren Jahr. Prüfe bei Oldies die Jahre in der Prüfansicht.
+**Jahr in den Metadaten:** Das Programm liest das Jahr aus den Tags der Datei, egal ob es im Titel steht. Es liest auch den alten ID3v1-Teil, den Windows in den Eigenschaften ebenfalls zeigt. Ein Jahr, das schon in der Datei steht, wird für die Ordner nach Zeitraum direkt genutzt. Schritt 2 trägt es nur dort ein, wo es fehlt.
+
+**Jahr von MusicBrainz:** Eingetragen wird das Jahr der ersten Veröffentlichung der gefundenen Aufnahme. Passt deine Datei zu einer späteren Fassung, etwa einer Neuaufnahme, steht dort deren Jahr. Prüfe bei Oldies die Jahre in der Prüfansicht.
 
 **Reihenfolge der Suche:** Zuerst MusicBrainz über den Namen, das braucht keinen Key. Findet das nichts, folgt die Klangerkennung und danach Discogs, falls jeweils Key oder Token eingetragen sind.
 
@@ -140,8 +142,10 @@ Das Programm liest Interpret und Titel aus den Tags, sonst aus dem Dateinamen. A
 **AcoustID-Key einrichten:** Dateien wie `track01.mp3` ohne Tags lassen sich nur am Klang erkennen.
 
 1. Klappe in Schritt 2 **Erweitert** auf und klicke auf **Key holen**. Die Seite von AcoustID öffnet sich.
-2. Melde dich an und lege eine Anwendung an, das ist kostenlos.
-3. Kopiere den Key in das Feld **AcoustID-Key**.
+2. Melde dich an. Unter **New Application** registrierst du eine **Anwendung**, das ist für private Zwecke kostenlos. Name und Version sind beliebig, zum Beispiel „Music Renamer“ und „1.0“. Die Kontakt-E-Mail ist Pflicht, die Website kannst du leer lassen. Dann **Register** klicken.
+3. Kopiere den **API-Key dieser Anwendung** in das Feld **AcoustID-Key**.
+
+Achtung: AcoustID zeigt dir auch einen persönlichen Benutzer-Key, der sieht genauso aus. Den lehnt AcoustID für die Erkennung ab. Dann meldet das Programm einmal „AcoustID lehnt den eingetragenen Key ab“ und sucht ohne Klangerkennung weiter.
 
 Die Einstellungen werden beim Start eines Schritts gespeichert.
 
@@ -297,6 +301,7 @@ Fällt nur ein Zusatzdienst für Cover, Songtexte, Genres oder Discogs aus, läu
 | Ein Treffer ist falsch | Wähle die Zeile in der Prüfansicht ab oder korrigiere sie per Doppelklick. Schon geschrieben: über den Verlauf zurücknehmen |
 | Eine Datei wird beim Umbenennen übersprungen | Interpret oder Titel fehlen. Schritt 2 oder Tag-Editor nutzen |
 | Fehlende Cover oder Songtexte | Nicht jedes Album hat ein Cover und nicht jeder Titel einen Songtext. Das Häkchen muss gesetzt sein, Dateien mit vorhandenem Cover bleiben unverändert |
+| „AcoustID lehnt den eingetragenen Key ab“ | Es ist der Benutzer-Key eingetragen. Lege auf acoustid.org eine Anwendung an und trage deren Key ein, siehe AcoustID-Key einrichten |
 | „Abbruch: …“ während der Suche | 25 Dateien in Folge wurden abgelehnt, oft liegt es an einem falschen Key. Key prüfen und neu starten, die Treffer sind gespeichert |
 | „Fehler bei Datei: …“ im Protokoll | Die Datei ist vielleicht schreibgeschützt oder gerade in einem Player geöffnet. Die anderen Dateien laufen weiter |
 | Die Statuszeile meldet „Pausiert“ | Keine Verbindung. Das Programm macht von selbst weiter |
