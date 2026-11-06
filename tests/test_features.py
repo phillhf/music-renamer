@@ -605,6 +605,18 @@ class MoreMetadata(Base):
         from musicrenamer import names
         self.assertEqual(names.parse_filename(r"C:\Ipod Music\- 05-im_stau.mp3")[0], "")
 
+    def test_forget_starts_over_but_keeps_history(self):
+        make_mp3(self.path("x.mp3"), 1, tags={"artist": "A", "title": "T"})
+        cli.cmd_rename(Namespace(ordner=self.root, muster="{title}", apply=True))
+        lookup.Cache(self.db).set("song:a|t|2", {"title": "T"})
+        with contextlib.redirect_stdout(io.StringIO()) as log:
+            cli.cmd_forget(None)
+        self.assertIn("gelöscht: 1", log.getvalue())
+        self.assertEqual(self.db.execute("SELECT count(*) FROM lookups").fetchone()[0], 0)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM files").fetchone()[0], 0)
+        cli.cmd_undo(None)
+        self.assertTrue(os.path.exists(self.path("x.mp3")))
+
     def test_placeholder_genre_counts_as_empty(self):
         from musicrenamer import names
         self.assertEqual(names.clean("Other"), "")

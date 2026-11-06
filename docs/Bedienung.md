@@ -43,8 +43,9 @@ Das Fenster führt dich Schritt für Schritt:
 | **Berichte öffnen** | öffnet den Ordner mit den CSV-Berichten |
 | **Tag-Editor** | Tags von Hand ändern |
 | **Genre-Regeln** | eigene Genre-Zuordnungen bearbeiten |
+| **Neu anfangen** | löscht alle gespeicherten Suchergebnisse und Klang-Fingerabdrücke und setzt den Status aller Schritte zurück. Deine Musik und der Verlauf bleiben, Zurücknehmen geht weiterhin |
 | **Hilfe** | öffnet diese Anleitung im Browser, auch während ein Schritt läuft |
-| **Nach Updates suchen** | prüft auf eine neue Version |
+| **Updates** | prüft auf eine neue Version |
 | **Sprache** | Deutsch oder Englisch, gilt ab dem nächsten Start |
 
 Als ausgeführt zählt ein Schritt erst, wenn du in der Prüfansicht bestätigt hast. Eine Vorschau oder eine abgebrochene Prüfansicht ändern den Status nicht. Der Status wird je Sammlung gespeichert und ist nach einem Neustart wieder da.
@@ -274,6 +275,8 @@ MusicBrainz erlaubt eine Anfrage pro Sekunde, und eine Datei braucht oft mehrere
 4. Steht die Verbindung wieder, läuft es von selbst weiter. Du musst nichts tun.
 
 Fällt nur ein Zusatzdienst für Cover, Songtexte, Genres oder Discogs aus, läuft alles weiter, und dieser Dienst wird 10 Minuten ausgelassen. Fehlende Cover und Songtexte holt ein erneuter Lauf nach.
+
+**Von vorn beginnen:** Ein neuer Start nutzt die gespeicherten Treffer. War ein Lauf fehlerhaft, etwa mit einem falschen Key, klickst du unten auf **Neu anfangen**. Danach sucht das Programm alles neu. Das dauert wieder so lange wie beim ersten Mal.
 
 **Wichtig bei großen Läufen:**
 

@@ -209,9 +209,10 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         ttk.Button(bottom, text=t("Berichte öffnen"), command=self._open_reports).pack(side="left", padx=6)
         self._button(bottom, t("Tag-Editor"), self._open_editor).pack(side="left")
         ttk.Button(bottom, text=t("Genre-Regeln"), command=self._open_rules).pack(side="left", padx=6)
+        self._button(bottom, t("Neu anfangen"), self._forget).pack(side="left", padx=(0, 6))
         ttk.Button(bottom, text=t("Hilfe"), command=lambda: webbrowser.open(cli.DOCS_URL + "Bedienung.md")).pack(
             side="left", padx=(0, 6))
-        self._button(bottom, t("Nach Updates suchen"),
+        self._button(bottom, t("Updates"),
                      lambda: self._run_background(self._check_update, quiet=False)).pack(side="left")
         language = ttk.Combobox(bottom, textvariable=self.language, values=list(i18n.LANGUAGES),
                                 state="readonly", width=8)
@@ -430,6 +431,14 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         folder = filedialog.askdirectory(title=t("Zielordner auswählen"))
         if folder:
             self.target_folder.set(os.path.normpath(folder))
+
+    def _forget(self):
+        if not messagebox.askyesno("Music Renamer", t("Alle gespeicherten Suchergebnisse und Klang-Fingerabdrücke löschen und bei allen Schritten von vorn beginnen?\n\nDeine Musik und der Verlauf bleiben unverändert, Zurücknehmen geht weiterhin. Die nächste Suche dauert dafür wieder so lange wie beim ersten Mal.")):
+            return
+        self.status.clear()
+        self._save()
+        self._refresh_nav()
+        self._run_background(cli.cmd_forget, Namespace())
 
     def _open_reports(self):
         os.makedirs(cli.REPORT_DIR, exist_ok=True)

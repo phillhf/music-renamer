@@ -497,6 +497,20 @@ def cmd_rename_files(args):
     run_renames(args, rows, skipped, None)
 
 
+def forget_results(db):
+    """Löscht Suchergebnisse, Fingerabdrücke und den gelesenen Stand der Sammlung; der Verlauf bleibt."""
+    count = db.execute("SELECT count(*) FROM lookups").fetchone()[0]
+    db.execute("DELETE FROM lookups")
+    db.execute("DELETE FROM files")
+    db.commit()
+    return count
+
+
+def cmd_forget(args):
+    count = forget_results(library.connect(DB_PATH))
+    print(t("Gespeicherte Ergebnisse gelöscht: {count}. Der nächste Lauf beginnt von vorn, der Verlauf bleibt erhalten.", count=count))
+
+
 def cmd_undo(args):
     path, done, problems = journaling.undo_last(DATA_DIR)
     if not path:
@@ -565,6 +579,9 @@ def main():
     undo = commands.add_parser("undo", help="letzten ausgeführten Schritt zurücknehmen", formatter_class=keep_lines,
                                epilog=f"Mehr dazu: {DOCS_URL}Befehlszeile.md#undo")
     undo.set_defaults(handler=cmd_undo)
+    forget = commands.add_parser("vergessen", help="gespeicherte Suchergebnisse löschen, um von vorn zu beginnen",
+                                 formatter_class=keep_lines, epilog=f"Mehr dazu: {DOCS_URL}Befehlszeile.md#vergessen")
+    forget.set_defaults(handler=cmd_forget)
     update = commands.add_parser("update", help="auf GitHub nach einer neuen Version suchen", formatter_class=keep_lines,
                                  epilog=f"Mehr dazu: {DOCS_URL}Befehlszeile.md#update")
     update.set_defaults(handler=cmd_update)

@@ -146,6 +146,19 @@ class Navigation(unittest.TestCase):
         self.app.update()
         self.assertEqual(self.app.level_box.winfo_ismapped(), opened)
 
+    def test_start_over_clears_status_after_asking(self):
+        self.app.status[self.app._status_key()] = {"tags": "06.11.2026"}
+        self.app._refresh_nav()
+        with mock.patch.object(gui.messagebox, "askyesno", return_value=False), \
+                mock.patch.object(self.app, "_run_background") as run:
+            self.app._forget()
+        self.assertFalse(run.called)
+        with mock.patch.object(gui.messagebox, "askyesno", return_value=True), \
+                mock.patch.object(self.app, "_run_background") as run:
+            self.app._forget()
+        self.assertIs(run.call_args[0][0], cli.cmd_forget)
+        self.assertIn("Noch nicht ausgeführt", self.app.nav_texts["tags"].get())
+
     def test_quick_rename_has_its_own_page(self):
         self.assertIs(self.app.drop_zone.master, self.app.pages[gui.QUICK])
 

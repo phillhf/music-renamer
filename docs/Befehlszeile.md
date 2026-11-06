@@ -11,6 +11,7 @@ Alle Befehle und Optionen von Music Renamer an einem Ort. Die Bedienung mit Fens
 - [tags](#tags)
 - [umbenennen](#umbenennen)
 - [undo](#undo)
+- [vergessen](#vergessen)
 - [update](#update)
 - [Key und Token](#key-und-token)
 - [Der komplette Ablauf für eine Sammlung](#der-komplette-ablauf-für-eine-sammlung)
@@ -58,6 +59,7 @@ music-renamer-cli tags "/mnt/nas/Meine Musik"
 | `tags ORDNER` | sucht Metadaten und schreibt sie mit `--apply` |
 | `umbenennen ORDNER` | benennt und sortiert Dateien mit `--apply` |
 | `undo` | nimmt den letzten ausgeführten Schritt zurück |
+| `vergessen` | löscht gespeicherte Suchergebnisse, um von vorn zu beginnen |
 | `update` | prüft, ob es eine neue Version gibt |
 
 | Option | Befehl | Wirkung |
@@ -293,6 +295,16 @@ music-renamer-cli undo
 Ein weiterer Aufruf nimmt den Schritt davor zurück. Dasselbe Protokoll nutzt auch das Fenster: Was dort unter „Verlauf“ steht, nimmt `undo` genauso zurück, solange derselbe Benutzer arbeitet.
 
 Liegt am alten Platz inzwischen eine andere Datei, wird nichts überschrieben. Das Programm nennt die Datei, und du kannst das Problem lösen und `undo` erneut aufrufen.
+
+## vergessen
+
+Löscht alle gespeicherten Suchergebnisse und Klang-Fingerabdrücke, ohne Rückfrage. Der nächste Lauf sucht alles neu. Deine Musik und die Protokolle für `undo` bleiben unverändert.
+
+```bash
+music-renamer-cli vergessen
+```
+
+Nützlich, wenn ein Lauf fehlerhaft war, etwa mit einem falschen AcoustID-Key. Das kostet Zeit, denn die nächste Suche dauert wieder so lange wie die erste.
 
 ## update
 
