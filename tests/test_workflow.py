@@ -242,7 +242,9 @@ class Discogs(Base):
                                      {"title": "Band (2) - Album", "year": "1991", "genre": ["Rock"]}]}).encode()
 
     def find(self, token="t"):
+        # Ohne fpcalc, damit es hier nur um Discogs geht
         with mock.patch.dict(os.environ, {"ACOUSTID_KEY": "", "DISCOGS_TOKEN": token}), \
+                mock.patch.object(lookup, "find_fpcalc", return_value=None), \
                 mock.patch.object(lookup, "_search_mb", return_value=None):
             return lookup.Lookup(self.db).find("a.mp3", "Band", "Song", 100)
 
