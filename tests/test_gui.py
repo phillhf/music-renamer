@@ -42,7 +42,9 @@ class Navigation(unittest.TestCase):
         self.app.status.clear()
         self.app.folder.set("C:/Musik")
         self.app.target_folder.set("")
-        self.app.pattern.set(cli.PATTERNS[0])
+        for variable in (self.app.by_period, self.app.by_genre, self.app.by_album):
+            variable.set(False)
+        self.app.file_name.set(gui.NAME_PATTERNS[0])
         self.app._go("dubletten")
         self.app.update()
 
@@ -95,11 +97,41 @@ class Navigation(unittest.TestCase):
 
     def test_example_follows_pattern_and_target(self):
         self.app.target_folder.set("D:/Sortiert")
-        self.app.pattern.set("{zeitraum}/{genre}/{artist} - {title}")
+        self.app.by_period.set(True)
+        self.app.by_genre.set(True)
         self.app.period_years.set("5")
-        self.assertIn(os.path.join("1985 - 1989", "Funk", "Prince - Kiss.mp3"), self.app.example.get())
-        self.app.pattern.set("{kaputt}")
+        self.assertIn(os.path.join("D:/Sortiert", "1985 - 1989", "Funk", "Prince - Kiss.mp3"), self.app.example.get())
+        self.app.by_period.set(False)
+        self.app.by_genre.set(False)
+        self.assertIn(os.path.join("D:/Sortiert", "Prince - Kiss.mp3"), self.app.example.get())
+        self.app.by_album.set(True)
+        self.app.file_name.set("{track} - {title}")
+        self.assertIn(os.path.join("Prince", "Parade", "04 - Kiss.mp3"), self.app.example.get())
+        self.app.file_name.set("{kaputt}")
         self.assertIn("ungültig", self.app.example.get())
+
+    def test_folders_are_optional_and_build_the_pattern(self):
+        self.assertEqual(self.app._pattern(), "{artist} - {title}")
+        self.app.by_period.set(True)
+        self.app.by_genre.set(True)
+        self.assertEqual(self.app._pattern(), "{zeitraum}/{genre}/{artist} - {title}")
+
+    def test_warns_when_step_two_is_missing_and_offers_new_collection(self):
+        started = []
+        with mock.patch.object(self.app, "_start", side_effect=lambda *a, **k: started.append(k)), \
+                mock.patch.object(gui.messagebox, "askyesno", return_value=False) as ask:
+            self.app._rename(True)
+        self.assertEqual((started, self.visible_page()), ([], "tags"))
+        self.assertIn("Schritt 2", ask.call_args[0][1])
+        self.app.status[self.app._status_key()] = {"tags": "06.11.2026"}
+        self.app.target_folder.set("D:/Sortiert")
+        self.app.by_period.set(True)
+        with mock.patch.object(self.app, "_start", side_effect=lambda *a, **k: started.append(k)):
+            self.app._rename(True)
+        self.assertEqual(started[0]["muster"], "{zeitraum}/{artist} - {title}")
+        with mock.patch.object(gui.messagebox, "askyesno", return_value=True):
+            started[0]["then"]()
+        self.assertEqual(self.app.folder.get(), "D:/Sortiert")
 
     def test_advanced_options_open_and_close(self):
         toggle = next(w for w in self.all_widgets(self.app.pages["tags"])

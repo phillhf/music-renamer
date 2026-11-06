@@ -105,9 +105,12 @@ Das Programm liest Interpret und Titel aus den Tags, sonst aus dem Dateinamen. A
 | Daten | Quelle |
 |---|---|
 | Interpret, Titel | [MusicBrainz](https://musicbrainz.org), optional Discogs |
-| Album, Tracknummer | MusicBrainz, optional Discogs |
-| Jahr | MusicBrainz, sonst iTunes-Suche, optional Discogs |
-| Album-Interpret | aus den Titeln eines Album-Ordners abgeleitet, zum Beispiel „Various Artists“ |
+| Album | MusicBrainz, optional Discogs |
+| Tracknummer mit Gesamtzahl, zum Beispiel `4/12` | MusicBrainz |
+| CD-Nummer mit Gesamtzahl, zum Beispiel `1/2` | MusicBrainz |
+| Label, also die Plattenfirma | MusicBrainz |
+| Jahr der Erstveröffentlichung | MusicBrainz, sonst iTunes-Suche, optional Discogs |
+| Album-Interpret | MusicBrainz, bei Album-Ordnern aus den Titeln abgeleitet, zum Beispiel „Various Artists“ |
 | Genre | MusicBrainz, sonst iTunes-Suche, optional Discogs |
 | Cover | [Cover Art Archive](https://coverartarchive.org), 500 Pixel, in die Datei eingebettet |
 | Songtexte | [LRCLIB](https://lrclib.net), in die Datei eingebettet |
@@ -116,7 +119,7 @@ Das Programm liest Interpret und Titel aus den Tags, sonst aus dem Dateinamen. A
 
 | Option | Bedeutung |
 |---|---|
-| **Vorhandene Tags ersetzen** | ersetzt auch gefüllte Felder. Ohne Häkchen werden nur leere Felder und Platzhalter wie „Track 01“ gefüllt. Nur mit Bedacht nutzen |
+| **Vorhandene Tags ersetzen** | ersetzt auch gefüllte Felder durch die Angaben von MusicBrainz und korrigiert so zum Beispiel die Schreibweise von Interpreten und Alben. Ohne Häkchen werden nur leere Felder und Platzhalter wie „Track 01“ oder das Genre „Other“ gefüllt. Prüfe die Liste vor dem Ausführen genau |
 | **Fehlende Cover einbetten** | vorhandene Cover bleiben immer unberührt |
 | **Fehlende Songtexte einbetten** | vorhandene Songtexte bleiben immer unberührt |
 | **Genres vereinheitlichen** | führt Varianten wie „Synth-Pop“ auf eine kurze Liste zurück, auch bei schon getaggten Dateien |
@@ -125,6 +128,10 @@ Das Programm liest Interpret und Titel aus den Tags, sonst aus dem Dateinamen. A
 | **eigener Wert** | Zahl von 1 bis 100, hat Vorrang vor der Auswahl |
 | **AcoustID-Key** | schaltet die Klangerkennung frei |
 | **Discogs-Token** | schaltet Discogs als zweite Quelle frei |
+
+**Mehrere Interpreten:** Steht im Tag eine Liste wie `Dr. Dre/Nate Dogg/Snoop Dogg`, sucht das Programm mit dem ersten Interpreten und ersetzt die Liste durch die Schreibweise von MusicBrainz, zum Beispiel `Dr. Dre feat. Snoop Dogg`. Das passiert auch ohne **Vorhandene Tags ersetzen**. Gäste im Titel wie „Stan (ft. Dido)“ stören die Suche nicht.
+
+**Jahr:** Eingetragen wird das Jahr der ersten Veröffentlichung der gefundenen Aufnahme. Passt deine Datei zu einer späteren Fassung, etwa einer Neuaufnahme, steht dort deren Jahr. Prüfe bei Oldies die Jahre in der Prüfansicht.
 
 **Reihenfolge der Suche:** Zuerst MusicBrainz über den Namen, das braucht keinen Key. Findet das nichts, folgt die Klangerkennung und danach Discogs, falls jeweils Key oder Token eingetragen sind.
 
@@ -153,15 +160,42 @@ Die Einstellungen werden beim Start eines Schritts gespeichert.
 
 Die eigenen Regeln gehen der eingebauten Liste vor.
 
-**Wann wird geladen?** Die Vorschau sucht schon online und speichert jeden Treffer. Sie kann lange dauern, aber „Prüfen und ausführen“ danach geht dann schnell. Cover und Songtexte werden erst beim Ausführen geladen.
+**Wann wird geladen?** Die Vorschau sucht schon online und speichert jeden Treffer, auch Label und CD-Angaben, je Album nur einmal. Sie kann lange dauern, aber „Prüfen und ausführen“ danach geht dann schnell. Cover und Songtexte werden erst beim Ausführen geladen.
 
 ## Schritt 3: Dateien umbenennen und sortieren
 
-Das **Muster** bestimmt den Namen. Du kannst eines aus der Liste wählen oder selbst eins eintippen.
+**Mach vorher Schritt 2.** Name und Ordner entstehen aus den Metadaten. Ohne Schritt 2 fehlen Jahr, Genre und Cover. Wurde Schritt 2 für die Sammlung noch nicht ausgeführt, fragt das Programm vor dem Umbenennen nach.
+
+**Zielordner:** Bleibt das Feld leer, bleibt alles in der Sammlung. Wählst du einen Ordner, zum Beispiel `D:\Musik sortiert`, wandern alle Dateien mit Interpret und Titel dorthin. Dateien ohne Interpret oder Titel bleiben in der Sammlung. Danach fragt das Programm, ob es den Zielordner als neue Sammlung übernehmen soll, damit die nächsten Schritte dort arbeiten.
+
+**Ordner:** Alle drei sind freiwillig und lassen sich kombinieren. Ohne Häkchen landen alle Dateien direkt im Zielordner.
+
+| Häkchen | Ordner |
+|---|---|
+| **Nach Zeitraum** | `1980 - 1984`. Wie viele Jahre ein Ordner umfasst, stellst du daneben ein, Standard ist 5, mit 10 entstehen Jahrzehnte. Ohne Jahr: „Unbekanntes Jahr“ |
+| **Darin nach Genre** | `Funk`, `Hip-Hop`. Ohne Genre: „Unbekanntes Genre“ |
+| **Darin nach Interpret und Album** | `Queen\A Night at the Opera`. Bei Samplern steht dort „Various Artists“, ohne Album „Unbekanntes Album“ |
+
+Mit allen drei Häkchen und einem Zielordner entsteht zum Beispiel:
+
+```
+Musik sortiert\
+  1980 - 1984\
+    Funk\
+      Prince\
+        Parade\
+          04 - Kiss.mp3
+  Unbekanntes Jahr\
+    Rock\
+```
+
+Jedes Genre aus den Tags bekommt einen eigenen Ordner, auch seltene wie „Synth-Pop“. Wer weniger, größere Ordner will, lässt vorher Schritt 2 mit **Genres vereinheitlichen** laufen. Dann wird zum Beispiel Rap zu Hip-Hop und Funk zu R&B.
+
+**Dateiname:** Du wählst ihn aus der Liste oder tippst ihn selbst:
 
 | Platzhalter | Inhalt | Wenn er fehlt |
 |---|---|---|
-| `{artist}` | Interpret | Datei wird übersprungen |
+| `{artist}` | Interpret, Listen wie `A/B` werden zu `A feat. B` | Datei wird übersprungen |
 | `{title}` | Titel | Datei wird übersprungen |
 | `{album}` | Album | wird zu „Unbekanntes Album“ |
 | `{albumartist}` | Album-Interpret | nimmt den Interpreten |
@@ -169,54 +203,16 @@ Das **Muster** bestimmt den Namen. Du kannst eines aus der Liste wählen oder se
 | `{genre}` | Genre, bei mehreren wie „Hip-Hop; Rap“ das erste | wird zu „Unbekanntes Genre“ |
 | `{zeitraum}` | Zeitraum aus dem Jahr, zum Beispiel `1980 - 1984` | wird zu „Unbekanntes Jahr“ |
 | `{track}` | Tracknummer, immer zweistellig: `03` | bleibt leer |
+| `{disc}` | CD-Nummer, zum Beispiel `1/2` | bleibt leer |
+| `{label}` | Label | bleibt leer |
 
-Unter dem Muster zeigt das Programm an einem Beispiel, wohin eine Datei käme. So siehst du die Wirkung, bevor du etwas startest.
+Unter den Einstellungen zeigt das Programm an einem Beispiel, wohin eine Datei käme. So siehst du die Wirkung, bevor du etwas startest.
 
-| Muster | Ergebnis |
-|---|---|
-| `{artist} - {title}` | `Queen - Bohemian Rhapsody.mp3` |
-| `{track} - {title}` | `11 - Bohemian Rhapsody.mp3` |
-| `{artist}/{album}/{track} - {title}` | `Queen/A Night at the Opera/11 - Bohemian Rhapsody.mp3` |
-| `{albumartist}/{year} - {album}/{track} - {title}` | `Queen/1975 - A Night at the Opera/11 - Bohemian Rhapsody.mp3` |
+**Ohne Zielordner und ohne Häkchen** bleibt jede Datei in ihrem Ordner und wird nur umbenannt. Mit einem Häkchen wird die ganze Sammlung neu sortiert, und leere Ordner werden entfernt.
 
-**Zeiträume:** `{zeitraum}` fasst Jahre zusammen. Wie viele, legt das Feld **Jahre je {zeitraum}** unter dem Muster fest, Standard ist 5. Die Zeiträume beginnen immer bei einer durch diese Zahl teilbaren Jahreszahl:
+Die Dateien werden verschoben, nicht kopiert. Auf demselben Laufwerk geht das sofort, auf ein anderes Laufwerk muss jede Datei kopiert werden, das dauert bei großen Sammlungen deutlich länger. Bricht dabei eine Kopie ab, etwa weil der Datenträger voll ist, bleibt die Datei an ihrem alten Platz, und es bleibt keine halbe Kopie zurück. Der Zielordner darf nicht im Dubletten-Ordner liegen.
 
-| Jahre je Zeitraum | 1983 wird zu |
-|---|---|
-| 5 | `1980 - 1984` |
-| 10 | `1980 - 1989` |
-| 1 | `1983` |
-
-Mit dem Muster `{zeitraum}/{genre}/{artist} - {title}` und einem Zielordner entsteht zum Beispiel:
-
-```
-Musik sortiert\
-  1980 - 1984\
-    Funk\
-    Hip-Hop\
-    Rap\
-  1985 - 1989\
-    ...
-  Unbekanntes Jahr\
-    Rock\
-```
-
-Jedes Genre aus den Tags bekommt einen eigenen Ordner, auch seltene wie „Synth-Pop“. Wer weniger, größere Ordner will, lässt vorher Schritt 2 mit **Genres vereinheitlichen** laufen. Dann wird zum Beispiel Rap zu Hip-Hop und Funk zu R&B.
-
-**Ohne `/` im Muster** bleibt jede Datei in ihrem Ordner. **Mit `/`** wird die ganze Sammlung neu sortiert, und leere Ordner werden entfernt. Der Schrägstrich `/` gilt auch unter Windows.
-
-**Zielordner:** Bleibt das Feld leer, bleibt alles in der Sammlung. Wählst du einen Ordner, zum Beispiel `D:\Musik sortiert`, wandern alle Dateien mit Interpret und Titel dorthin, nach dem Muster benannt und sortiert:
-
-| Muster | Ergebnis im Zielordner |
-|---|---|
-| `{artist}/{album}/{track} - {title}` | `D:\Musik sortiert\Queen\A Night at the Opera\11 - Bohemian Rhapsody.mp3` |
-| `{artist} - {title}` | `D:\Musik sortiert\Queen - Bohemian Rhapsody.mp3`, alle Dateien direkt im Zielordner |
-
-Dateien ohne Interpret oder Titel bleiben in der Sammlung. So hast du danach die fertigen Dateien im Zielordner und die Problemfälle im alten Ordner, die du mit dem Tag-Editor nacharbeiten und dann erneut verschieben kannst. Geleerte Ordner in der Sammlung werden entfernt.
-
-Die Dateien werden verschoben, nicht kopiert. Auf demselben Laufwerk geht das sofort, auf ein anderes Laufwerk muss jede Datei kopiert werden, das dauert bei großen Sammlungen deutlich länger. Bricht dabei eine Kopie ab, etwa weil der Datenträger voll ist, bleibt die Datei an ihrem alten Platz, und es bleibt keine halbe Kopie zurück. Vorhandene Dateien im Zielordner werden nie überschrieben. Der Zielordner darf nicht im Dubletten-Ordner liegen. Alles lässt sich im Verlauf zurücknehmen.
-
-Zeichen, die Dateisysteme nicht erlauben, werden entfernt. Ist ein Name schon vergeben, kommt ` (2)` dazu, vorhandene Dateien werden nie überschrieben. Dateien ohne Interpret oder Titel werden übersprungen, für sie hilft zuerst Schritt 2 oder der Tag-Editor.
+Zeichen, die Dateisysteme nicht erlauben, werden entfernt. Ist ein Name schon vergeben, kommt ` (2)` dazu, vorhandene Dateien werden nie überschrieben. Alles lässt sich im Verlauf zurücknehmen.
 
 ## Dateien ins Fenster ziehen
 

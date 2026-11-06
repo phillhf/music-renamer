@@ -7,27 +7,30 @@ import os
 
 from mutagen.asf import ASF
 from mutagen.flac import FLAC, Picture
-from mutagen.id3 import APIC, TALB, TCON, TDRC, TIT2, TPE1, TPE2, TRCK, USLT
+from mutagen.id3 import APIC, TALB, TCON, TDRC, TIT2, TPE1, TPE2, TPOS, TPUB, TRCK, USLT
 from mutagen.mp3 import MP3
-from mutagen.mp4 import MP4, MP4Cover
+from mutagen.mp4 import MP4, MP4Cover, MP4FreeForm
 from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 
 OPENERS = {".mp3": MP3, ".flac": FLAC, ".m4a": MP4, ".mp4": MP4,
            ".ogg": OggVorbis, ".opus": OggOpus, ".wma": ASF}
 EXTENSIONS = tuple(OPENERS)
-FIELDS = ("artist", "title", "album", "albumartist", "year", "genre", "track")
+FIELDS = ("artist", "title", "album", "albumartist", "year", "genre", "track", "disc", "label")
 
 ID3_FRAMES = {"artist": ("TPE1", TPE1), "title": ("TIT2", TIT2), "album": ("TALB", TALB),
               "albumartist": ("TPE2", TPE2), "year": ("TDRC", TDRC), "genre": ("TCON", TCON),
-              "track": ("TRCK", TRCK)}
+              "track": ("TRCK", TRCK), "disc": ("TPOS", TPOS), "label": ("TPUB", TPUB)}
 VORBIS_KEYS = {"artist": "artist", "title": "title", "album": "album", "albumartist": "albumartist",
-               "year": "date", "genre": "genre", "track": "tracknumber", "lyrics": "lyrics"}
+               "year": "date", "genre": "genre", "track": "tracknumber", "disc": "discnumber",
+               "label": "label", "lyrics": "lyrics"}
 MP4_KEYS = {"artist": "\xa9ART", "title": "\xa9nam", "album": "\xa9alb", "albumartist": "aART",
             "year": "\xa9day", "genre": "\xa9gen", "lyrics": "\xa9lyr"}
+MP4_LABEL = "----:com.apple.iTunes:LABEL"
+MP4_NUMBERS = {"track": "trkn", "disc": "disk"}
 ASF_KEYS = {"artist": "Author", "title": "Title", "album": "WM/AlbumTitle",
             "albumartist": "WM/AlbumArtist", "year": "WM/Year", "genre": "WM/Genre",
-            "track": "WM/TrackNumber", "lyrics": "WM/Lyrics"}
+            "track": "WM/TrackNumber", "disc": "WM/PartOfSet", "label": "WM/Publisher", "lyrics": "WM/Lyrics"}
 
 
 def open_audio(path):
@@ -63,8 +66,12 @@ def read_tags(audio):
         return _read_id3(tags) if tags else {**dict.fromkeys(FIELDS, ""), "has_cover": False, "has_lyrics": False}
     if isinstance(audio, MP4):
         values = _read_keys(tags, MP4_KEYS)
-        number = tags.get("trkn")
-        values["track"] = str(number[0][0]) if number and number[0][0] else ""
+        for field, key in MP4_NUMBERS.items():
+            number = tags.get(key)
+            number, total = number[0] if number else (0, 0)
+            values[field] = (f"{number}/{total}" if total else str(number)) if number else ""
+        label = tags.get(MP4_LABEL)
+        values["label"] = bytes(label[0]).decode("utf-8", "replace").strip() if label else ""
         values["has_cover"] = bool(tags.get("covr"))
         return values
     if isinstance(audio, ASF):
@@ -122,12 +129,17 @@ def _write_mp4(audio, values):
                 audio.tags["covr"] = [MP4Cover(value, imageformat=image)]
             else:
                 audio.tags.pop("covr", None)
-        elif field == "track":
-            number = str(value).split("/")[0]
+        elif field in MP4_NUMBERS:
+            number, _, total = str(value).partition("/")
             if number.isdigit():
-                audio.tags["trkn"] = [(int(number), 0)]
+                audio.tags[MP4_NUMBERS[field]] = [(int(number), int(total) if total.isdigit() else 0)]
             else:
-                audio.tags.pop("trkn", None)
+                audio.tags.pop(MP4_NUMBERS[field], None)
+        elif field == "label":
+            if value:
+                audio.tags[MP4_LABEL] = [MP4FreeForm(str(value).encode("utf-8"))]
+            else:
+                audio.tags.pop(MP4_LABEL, None)
         else:
             _set_keys(audio.tags, MP4_KEYS, field, value)
     audio.save()

@@ -59,7 +59,8 @@ class RealAudio(unittest.TestCase):
             with self.subTest(name):
                 path = self.files[1, name]
                 values = {"artist": "Die Ärzte", "title": "Männer", "album": "13", "albumartist": "Die Ärzte",
-                          "year": "1998", "genre": "Punk", "track": "3", "lyrics": "Text"}
+                          "year": "1998", "genre": "Punk", "track": "3", "disc": "1/2", "label": "Hot Action",
+                          "lyrics": "Text"}
                 if not name.endswith(".wma"):
                     values["cover"] = b"\xff\xd8\xff\xe0" + b"bild" * 50
                 tags.write_tags(path, values)

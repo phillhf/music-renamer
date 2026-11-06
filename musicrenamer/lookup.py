@@ -21,7 +21,7 @@ from . import __version__
 from .i18n import format_duration, t
 from .job import job
 from .library import audio_key
-from .names import normalize
+from .names import FEATURING, normalize
 from .system import SSL_CONTEXT
 
 USER_AGENT = f"MusicRenamer/{__version__} (https://github.com/phillhf/music-renamer)"
@@ -174,11 +174,25 @@ def _track_number(release):
     return number if number.isdigit() else ""
 
 
+def _medium(release):
+    """CD-Nummer und Titelzahl der CD, auf der die Aufnahme liegt."""
+    media = release.get("media") or [{}]
+    return str(media[0].get("position") or ""), str(media[0].get("track-count") or "")
+
+
 def _release_entry(release):
     """Das Wenige, was die Album-Erkennung je Veröffentlichung braucht."""
+    disc, tracks = _medium(release)
     return {"group": release.get("release-group", {}).get("id", ""), "title": release.get("title", ""),
             "date": release.get("date") or "", "track": _track_number(release),
-            "rank": sum(_release_rank(release)[:3])}
+            "rank": sum(_release_rank(release)[:3]), "id": release.get("id", ""), "disc": disc, "tracks": tracks}
+
+
+def _release_details(data):
+    labels = [info["label"]["name"] for info in data.get("label-info") or []
+              if (info.get("label") or {}).get("name") and info["label"]["name"] != "[no label]"]
+    return {"discs": str(len(data.get("media") or []) or ""), "label": labels[0] if labels else "",
+            "albumartist": _credit(data)}
 
 
 def _best_release(recording):
@@ -205,7 +219,9 @@ def _top_genre(entity):
 def _result_from(recording, source):
     release = _best_release(recording)
     date = recording.get("first-release-date") or release.get("date") or ""
+    disc, tracks = _medium(release)
     return {"artist": _credit(recording), "title": recording.get("title", ""),
+            "release_id": release.get("id", ""), "disc": disc, "tracks": tracks,
             "album": release.get("title", ""), "year": date[:4],
             "genre": _top_genre(recording), "track": _track_number(release),
             "source": source, "group": release.get("release-group", {}).get("id", ""),
@@ -217,7 +233,9 @@ def _result_from(recording, source):
 
 def _search_mb(artist, title, duration):
     escape = lambda s: re.sub(r'([+\-&|!(){}\[\]^"~*?:\\/])', r"\\\1", s)
-    query = f'recording:"{escape(title)}" AND artist:"{escape(artist)}"'
+    # "Stan (ft. Dido)" findet MusicBrainz nur ohne den Gast, der Abgleich danach prüft ihn ohnehin nicht
+    plain = lambda s: FEATURING.sub("", s).strip() or s
+    query = f'recording:"{escape(plain(title))}" AND artist:"{escape(plain(artist))}"'
     # Beliebte Titel haben Hunderte Live-Mitschnitte, die sonst die Trefferliste füllen
     wants_live = "live" in normalize(title).split()
     if not wants_live:
@@ -343,6 +361,16 @@ class Lookup:
         if (not result or result.get("rejected")) and self.discogs_token:
             return self._by_discogs(artist, title) or result
         return result
+
+    def release(self, release_id):
+        """Label, CD-Zahl und Album-Interpret einer Veröffentlichung; eine Abfrage je Album."""
+        key = f"release:{release_id}"
+        cached = self.cache.get(key)
+        if cached is None:
+            data = _get(f"{MB_URL}/release/{release_id}?inc=labels+artist-credits+media&fmt=json", 1.1) or {}
+            cached = _release_details(data)
+            self.cache.set(key, cached)
+        return cached
 
     def _by_discogs(self, artist, title):
         if not (artist and title):

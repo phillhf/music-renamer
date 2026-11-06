@@ -4,7 +4,9 @@ import re
 import unicodedata
 
 JUNK_VALUES = {"", "unknown", "unknown artist", "unknown album", "unbekannt",
-               "unbekannter interpret", "artist", "title", "track", "various", "n/a", "none"}
+               "unbekannter interpret", "artist", "title", "track", "various", "n/a", "none",
+               # Platzhalter-Genres, die Player beim Rippen eintragen
+               "other", "others", "misc", "miscellaneous", "sonstige", "sonstiges", "genre", "unknown genre"}
 JUNK_PATTERN = re.compile(r"^(track|titel|audiotrack|spur)\s*\d*$|https?://|www\.|\.(com|net|org|ru)\b", re.I)
 GENERIC_FOLDERS = {"music", "musik", "mp3", "mp3s", "downloads", "download", "neuer ordner",
                    "new folder", "sammlung", "various", "various artists", "unsorted", "sonstiges"}
@@ -27,6 +29,26 @@ def is_junk(value):
 def clean(value):
     """Tagwert oder leer, falls er nur ein Platzhalter ist."""
     return "" if is_junk(value) else value.strip()
+
+
+def artist_list(value):
+    """Einzelne Interpreten aus Listen wie "Dr. Dre/Nate Dogg"; ein Name wie "AC/DC" bleibt ganz."""
+    value = (value or "").strip()
+    parts = [part.strip() for part in re.split(r"\x00|;|/", value) if part.strip()]
+    if len(parts) > 1 and ("\x00" in value or ";" in value or any(" " in part for part in parts)):
+        return parts
+    return [value] if value else []
+
+
+def main_artist(value):
+    parts = artist_list(value)
+    return parts[0] if parts else ""
+
+
+def display_artist(value):
+    """Lesbare Form einer Interpreten-Liste: "Dr. Dre feat. Nate Dogg, Snoop Dogg"."""
+    parts = artist_list(value)
+    return f"{parts[0]} feat. {', '.join(parts[1:])}" if len(parts) > 1 else (value or "").strip()
 
 
 def parse_filename(path):

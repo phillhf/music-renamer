@@ -210,6 +210,8 @@ Verfügbare Platzhalter:
 | `{albumartist}` | Album-Interpret | nimmt `{artist}` |
 | `{year}` | Jahr | bleibt leer |
 | `{genre}` | Genre, bei mehreren wie „Hip-Hop; Rap“ das erste | wird zu „Unbekanntes Genre“ |
+| `{disc}` | CD-Nummer, zum Beispiel `1/2` | bleibt leer |
+| `{label}` | Label | bleibt leer |
 | `{zeitraum}` | Zeitraum aus dem Jahr, zum Beispiel `1980 - 1984` | wird zu „Unbekanntes Jahr“ |
 | `{track}` | Tracknummer, immer zweistellig: `03` | bleibt leer |
 

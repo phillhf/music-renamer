@@ -25,6 +25,7 @@ SETTINGS_PATH = os.path.join(cli.APP_DIR, "einstellungen.json")
 ACOUSTID_KEY_URL = "https://acoustid.org/new-application"
 STEPS = ("dubletten", "tags", "umbenennen")
 QUICK = "schnell"
+NAME_PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist} - {album} - {track} - {title}", "{title}")
 STEP_NAMES = {"dubletten": "Dubletten aussortieren", "tags": "Metadaten ergänzen",
               "umbenennen": "Umbenennen und sortieren"}
 
@@ -121,7 +122,12 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.cover = tk.BooleanVar(value=settings.get("cover", False))
         self.lyrics = tk.BooleanVar(value=settings.get("songtexte", False))
         self.unify_genres = tk.BooleanVar(value=settings.get("genres", False))
-        self.pattern = tk.StringVar(value=settings.get("muster", cli.PATTERNS[0]))
+        # Bis 0.15 gab es nur ein Muster; Ordner darin werden zu den neuen Häkchen
+        old = settings.get("muster", cli.PATTERNS[0]).split("/")
+        self.file_name = tk.StringVar(value=settings.get("dateiname", old[-1]))
+        self.by_period = tk.BooleanVar(value=settings.get("ordner_zeitraum", "{zeitraum}" in old[:-1]))
+        self.by_genre = tk.BooleanVar(value=settings.get("ordner_genre", "{genre}" in old[:-1]))
+        self.by_album = tk.BooleanVar(value=settings.get("ordner_album", any("{album}" in p for p in old[:-1])))
         self.target_folder = tk.StringVar(value=settings.get("zielordner", ""))
         self.period_years = tk.StringVar(value=str(settings.get("zeitraum_jahre", cli.PERIOD_YEARS)))
         self.language = tk.StringVar(value=next(k for k, v in i18n.LANGUAGES.items() if v == i18n.language))
@@ -300,16 +306,27 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         ttk.Button(form, text=t("Auswählen ..."), command=self._choose_target).grid(row=0, column=2, padx=(6, 0))
         ttk.Label(form, text=t("Leer lassen, wenn alles in der Sammlung bleiben soll."), style="Info.TLabel").grid(
             row=1, column=1, columnspan=2, sticky="w")
-        ttk.Label(form, text=t("Muster:")).grid(row=2, column=0, sticky="w", padx=(0, 8), pady=(8, 3))
-        ttk.Combobox(form, textvariable=self.pattern, values=cli.PATTERNS).grid(
-            row=2, column=1, columnspan=2, sticky="ew", pady=(8, 3))
-        ttk.Label(form, text=t("Jahre je {zeitraum}:")).grid(row=3, column=0, sticky="w", padx=(0, 8), pady=3)
-        ttk.Spinbox(form, textvariable=self.period_years, from_=1, to=100, width=4).grid(
-            row=3, column=1, sticky="w", pady=3)
+        ttk.Label(form, text=t("Ordner:")).grid(row=2, column=0, sticky="nw", padx=(0, 8), pady=(8, 3))
+        folders = ttk.Frame(form)
+        folders.grid(row=2, column=1, columnspan=2, sticky="w", pady=(8, 3))
+        period = ttk.Frame(folders)
+        period.pack(anchor="w")
+        ttk.Checkbutton(period, text=t("Nach Zeitraum, zum Beispiel 1980 - 1984, mit"),
+                        variable=self.by_period).pack(side="left")
+        ttk.Spinbox(period, textvariable=self.period_years, from_=1, to=100, width=4).pack(side="left", padx=4)
+        ttk.Label(period, text=t("Jahren je Ordner")).pack(side="left")
+        ttk.Checkbutton(folders, text=t("Darin nach Genre"), variable=self.by_genre).pack(anchor="w", pady=2)
+        ttk.Checkbutton(folders, text=t("Darin nach Interpret und Album"), variable=self.by_album).pack(anchor="w")
+        ttk.Label(folders, text=t("Ohne Häkchen landen alle Dateien direkt im Zielordner."), style="Info.TLabel").pack(
+            anchor="w", pady=(2, 0))
+        ttk.Label(form, text=t("Dateiname:")).grid(row=3, column=0, sticky="w", padx=(0, 8), pady=(8, 3))
+        ttk.Combobox(form, textvariable=self.file_name, values=NAME_PATTERNS).grid(
+            row=3, column=1, columnspan=2, sticky="ew", pady=(8, 3))
         self.example = tk.StringVar()
         ttk.Label(form, textvariable=self.example, style="Info.TLabel").grid(
             row=4, column=0, columnspan=3, sticky="w", pady=(6, 0))
-        for variable in (self.pattern, self.period_years, self.target_folder, self.folder):
+        for variable in (self.file_name, self.by_period, self.by_genre, self.by_album, self.period_years,
+                         self.target_folder, self.folder):
             variable.trace_add("write", self._update_example)
         self._update_example()
         self._actions(page, self._rename)
@@ -321,19 +338,26 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                                    padding=50)
         self.drop_zone.pack(fill="x", pady=(6, 0))
 
+    def _pattern(self):
+        """Das Muster aus den Häkchen und dem Dateinamen, wie es cli.target_name versteht."""
+        folders = ["{zeitraum}"] * self.by_period.get() + ["{genre}"] * self.by_genre.get()
+        if self.by_album.get():
+            folders += ["{albumartist}", "{album}"]
+        return "/".join([*folders, self.file_name.get().strip() or NAME_PATTERNS[0]])
+
     def _update_example(self, *unused):
         """Zeigt am Beispiel, wohin eine Datei mit dem aktuellen Muster käme."""
         sample = SimpleNamespace(artist="Prince", title="Kiss", album="Parade", albumartist="", year="1986",
-                                 genre="Funk", track="4", path="kiss.mp3")
+                                 genre="Funk", track="4", disc="", label="", path="kiss.mp3")
         try:
-            name = cli.target_name(sample, self.pattern.get().strip(), self._period_years(quiet=True) or 5)
+            name = cli.target_name(sample, self._pattern(), self._period_years(quiet=True) or 5)
         except (KeyError, ValueError, IndexError):
             name = None
         if not name:
             self.example.set(t("Das Muster ist ungültig oder ergibt keinen Namen."))
             return
         base = self.target_folder.get().strip() or self.folder.get().strip() or t("Sammlung")
-        if "/" not in self.pattern.get() and not self.target_folder.get().strip():
+        if "/" not in self._pattern() and not self.target_folder.get().strip():
             base = os.path.join(base, "…")
         self.example.set(t("Beispiel: {path}", path=os.path.join(base, name)))
 
@@ -509,13 +533,15 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                     "genauigkeit": LEVEL_LABELS[self.accuracy.get()],
                     "eigene_genauigkeit": self.custom_accuracy.get().strip(),
                     "cover": self.cover.get(), "songtexte": self.lyrics.get(), "genres": self.unify_genres.get(),
-                    "muster": self.pattern.get().strip(), "zielordner": self.target_folder.get().strip(),
+                    "muster": self._pattern(), "dateiname": self.file_name.get().strip(),
+                    "ordner_zeitraum": self.by_period.get(), "ordner_genre": self.by_genre.get(),
+                    "ordner_album": self.by_album.get(), "zielordner": self.target_folder.get().strip(),
                     "zeitraum_jahre": self._period_years(quiet=True) or cli.PERIOD_YEARS,
                     "sprache": i18n.LANGUAGES[self.language.get()], "status": self.status}
         save_settings(settings)
         return settings
 
-    def _start(self, step, command, apply, **options):
+    def _start(self, step, command, apply, then=None, **options):
         folder = self.folder.get().strip()
         if not folder:
             messagebox.showinfo("Music Renamer", t("Bitte zuerst oben die Sammlung auswählen."))
@@ -526,7 +552,12 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         # Nur ein ausgeführter Schritt zählt als erledigt, eine Vorschau nicht
         self.running_step, self.review_cancelled = step, False
         self._run_background(command, Namespace(ordner=folder, apply=apply, review=self._ask_review, **options),
-                             on_success=(lambda: self._mark_done(step, folder)) if apply else None)
+                             on_success=(lambda: self._finished(step, folder, then)) if apply else None)
+
+    def _finished(self, step, folder, then):
+        self._mark_done(step, folder)
+        if then:
+            then()
 
     def _dupes(self, apply):
         self._start("dubletten", cli.cmd_dupes, apply, ziel=None, aehnlich=self.similar.get(), klang=self.sound.get())
@@ -570,8 +601,22 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         years = self._period_years()
         if years is None:
             return
-        self._start("umbenennen", cli.cmd_rename, apply, muster=self.pattern.get().strip(), zeitraum=years,
-                    zielordner=self.target_folder.get().strip() or None)
+        folder = self.folder.get().strip()
+        tagged = self.status.get(self._status_key(), {}).get("tags")
+        if apply and folder and not tagged and not messagebox.askyesno(
+                "Music Renamer", t("Schritt 2 wurde für diese Sammlung noch nicht ausgeführt. Ohne ihn fehlen Jahr, Genre und Cover, und Dateien ohne Jahr landen in „Unbekanntes Jahr“.\n\nTrotzdem umbenennen?")):
+            self._go("tags")
+            return
+        target = self.target_folder.get().strip()
+        self._start("umbenennen", cli.cmd_rename, apply, muster=self._pattern(), zeitraum=years,
+                    zielordner=target or None, then=lambda: self._offer_new_collection(target))
+
+    def _offer_new_collection(self, target):
+        """Nach dem Verschieben liegen die Dateien woanders; dort sollen die nächsten Schritte arbeiten."""
+        if target and system.fold(os.path.abspath(target)) != self._status_key() and messagebox.askyesno(
+                "Music Renamer", t("Die Dateien liegen jetzt in {path}.\n\nDiesen Ordner als Sammlung übernehmen, damit die nächsten Schritte dort arbeiten?", path=target)):
+            self.folder.set(target)
+            self._save()
 
     def _check_update(self, quiet):
         try:

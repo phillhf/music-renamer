@@ -3,11 +3,22 @@ language = "de"
 
 LANGUAGES = {"Deutsch": "de", "English": "en"}
 FIELD_LABELS = {"artist": "Interpret", "title": "Titel", "album": "Album", "albumartist": "Album-Interpret",
-                "year": "Jahr", "genre": "Genre", "track": "Track"}
+                "year": "Jahr", "genre": "Genre", "track": "Track", "disc": "CD", "label": "Label"}
 EN = {
     "Abbrechen": "Cancel",
     "Abbruch: {reason}. Bisherige Treffer sind gespeichert, einfach erneut starten.": "Stopped: {reason}. Results so far are saved, just start again.",
     "Hilfe": "Help",
+    "Ordner:": "Folders:",
+    "Nach Zeitraum, zum Beispiel 1980 - 1984, mit": "By period, for example 1980 - 1984, with",
+    "Jahren je Ordner": "years per folder",
+    "Darin nach Genre": "Inside by genre",
+    "Darin nach Interpret und Album": "Inside by artist and album",
+    "Ohne Häkchen landen alle Dateien direkt im Zielordner.": "Without ticks all files go straight into the target folder.",
+    "Dateiname:": "File name:",
+    "Schritt 2 wurde für diese Sammlung noch nicht ausgeführt. Ohne ihn fehlen Jahr, Genre und Cover, und Dateien ohne Jahr landen in „Unbekanntes Jahr“.\n\nTrotzdem umbenennen?": "Step 2 has not been run for this collection yet. Without it, year, genre and cover are missing, and files without a year end up in “Unbekanntes Jahr”.\n\nRename anyway?",
+    "Die Dateien liegen jetzt in {path}.\n\nDiesen Ordner als Sammlung übernehmen, damit die nächsten Schritte dort arbeiten?": "The files are now in {path}.\n\nUse this folder as your collection so the next steps work there?",
+    "Album-Angaben laden": "Loading album details",
+    "Album-Angaben nicht verfügbar: {reason}": "Album details not available: {reason}",
     "Protokoll": "Log",
     "1. Vorschau ansehen": "1. Show preview",
     "2. Prüfen und ausführen": "2. Review and run",

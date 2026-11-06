@@ -17,23 +17,23 @@ from .i18n import t
 from .job import job
 from .tags import EXTENSIONS, open_audio, read_tags
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS files (
     path TEXT PRIMARY KEY, size INTEGER, mtime REAL,
     duration REAL, bitrate INTEGER,
     artist TEXT, title TEXT, album TEXT, albumartist TEXT, year TEXT, genre TEXT, track TEXT,
-    has_cover INTEGER, has_lyrics INTEGER,
+    disc TEXT, label TEXT, has_cover INTEGER, has_lyrics INTEGER,
     audio_start INTEGER, audio_size INTEGER, audio_hash TEXT, error TEXT
 );
 CREATE TABLE IF NOT EXISTS lookups (key TEXT PRIMARY KEY, result TEXT);
 """
 TRACK_COLUMNS = ("path", "size", "duration", "bitrate", "artist", "title", "album", "albumartist",
-                 "year", "genre", "track", "has_cover", "has_lyrics", "audio_start", "audio_size",
+                 "year", "genre", "track", "disc", "label", "has_cover", "has_lyrics", "audio_start", "audio_size",
                  "audio_hash")
 KEY_SAMPLE = 1024 * 1024
 READ_COLUMNS = ("duration", "bitrate", "artist", "title", "album", "albumartist", "year", "genre",
-                "track", "has_cover", "has_lyrics", "audio_start", "audio_size", "audio_hash")
+                "track", "disc", "label", "has_cover", "has_lyrics", "audio_start", "audio_size", "audio_hash")
 
 
 @dataclass
@@ -49,6 +49,8 @@ class Track:
     year: str
     genre: str
     track: str
+    disc: str
+    label: str
     has_cover: int
     has_lyrics: int
     audio_start: int

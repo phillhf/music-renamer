@@ -515,6 +515,62 @@ class Patterns(Base):
             self.rename("{kuenstler} - {title}")
 
 
+class MoreMetadata(Base):
+    def test_disc_and_label_roundtrip(self):
+        make_mp3(self.path("a.mp3"), 1)
+        make_flac(self.path("b.flac"))
+        for name in ("a.mp3", "b.flac"):
+            tags.write_tags(self.path(name), {"track": "3/12", "disc": "1/2", "label": "Hot Action"})
+            values = library.read_file(self.path(name))
+            self.assertEqual((values["track"], values["disc"], values["label"]), ("3/12", "1/2", "Hot Action"))
+
+    def test_artist_lists_become_readable(self):
+        from musicrenamer import names
+        self.assertEqual(names.display_artist("Dr. Dre/Nate Dogg/Snoop Dogg"), "Dr. Dre feat. Nate Dogg, Snoop Dogg")
+        self.assertEqual(names.display_artist("AC/DC"), "AC/DC")
+        self.assertEqual(names.main_artist("112/Diddy/Puff Daddy & the Family"), "112")
+        self.assertEqual(names.artist_list("A\x00B"), ["A", "B"])
+
+    def test_file_name_from_artist_list(self):
+        make_mp3(self.path("x.mp3"), 1, tags={"artist": "Dr. Dre/Nate Dogg/Snoop Dogg", "title": "The Next Episode"})
+        cli.cmd_rename(Namespace(ordner=self.root, muster="{artist} - {title}", apply=True))
+        self.assertTrue(os.path.exists(self.path("Dr. Dre feat. Nate Dogg, Snoop Dogg - The Next Episode.mp3")))
+
+    def test_search_uses_the_main_artist_and_replaces_lists(self):
+        make_mp3(self.path("x.mp3"), 1, tags={"artist": "Dr. Dre/Nate Dogg", "title": "The Next Episode",
+                                                 "genre": "Other"})
+        asked = []
+
+        def find(lookup_self, path, artist, title, duration):
+            asked.append(artist)
+            return {"artist": "Dr. Dre feat. Snoop Dogg", "title": "The Next Episode", "album": "2001",
+                    "year": "1999", "genre": "Hip Hop", "track": "", "source": "musicbrainz", "group": "", "releases": []}
+        with mock.patch.object(lookup.Lookup, "find", find):
+            cli.cmd_tag(Namespace(ordner=self.root, apply=True, ueberschreiben=False, limit=None, genauigkeit="normal"))
+        values = library.read_file(self.path("x.mp3"))
+        self.assertEqual(asked, ["Dr. Dre"])
+        self.assertEqual((values["artist"], values["genre"]), ("Dr. Dre feat. Snoop Dogg", "Hip Hop"))
+
+    def test_release_details_complete_the_album(self):
+        make_mp3(self.path("x.mp3"), 1, tags={"artist": "A", "title": "T"})
+        found = {"artist": "A", "title": "T", "album": "Album", "year": "1990", "genre": "Rock", "track": "4",
+                 "tracks": "12", "disc": "2", "release_id": "r1", "source": "musicbrainz", "group": "g", "releases": []}
+        release = {"media": [{}, {}], "label-info": [{"label": {"name": "[no label]"}}, {"label": {"name": "Sony"}}],
+                   "artist-credit": [{"name": "Various Artists"}]}
+        with mock.patch.object(lookup.Lookup, "find", lambda *a: dict(found)), \
+                mock.patch.object(lookup, "_get", return_value=release) as get:
+            cli.cmd_tag(Namespace(ordner=self.root, apply=True, ueberschreiben=False, limit=None, genauigkeit="normal"))
+            cli.cmd_tag(Namespace(ordner=self.root, apply=False, ueberschreiben=True, limit=None, genauigkeit="normal"))
+        values = library.read_file(self.path("x.mp3"))
+        self.assertEqual((values["track"], values["disc"], values["label"], values["albumartist"]),
+                         ("4/12", "2/2", "Sony", "Various Artists"))
+        self.assertEqual(get.call_count, 1)  # gespeichert, kein zweiter Abruf
+
+    def test_placeholder_genre_counts_as_empty(self):
+        from musicrenamer import names
+        self.assertEqual(names.clean("Other"), "")
+
+
 class ReleaseData(unittest.TestCase):
     def test_result_keeps_album_data(self):
         recording = {"title": "T", "first-release-date": "1980", "artist-credit": [{"name": "A", "artist": {"id": "x"}}],
@@ -523,7 +579,8 @@ class ReleaseData(unittest.TestCase):
                                    "media": [{"track": [{"number": "4"}]}]}]}
         result = lookup._result_from(recording, "musicbrainz")
         self.assertEqual((result["group"], result["track"]), ("rg", "4"))
-        self.assertEqual(result["releases"][0], {"group": "rg", "title": "Album", "date": "1980", "track": "4", "rank": 0})
+        self.assertEqual(result["releases"][0], {"group": "rg", "title": "Album", "date": "1980", "track": "4", "rank": 0,
+                                                 "id": "", "disc": "", "tracks": ""})
 
     def test_album_survives_many_samplers(self):
         sampler = {"title": "Sampler", "status": "Official", "date": "2000",

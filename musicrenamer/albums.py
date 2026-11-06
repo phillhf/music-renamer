@@ -41,6 +41,8 @@ def _assign(members, group):
                      albumartist=next(iter(artists)) if len(artists) == 1 else VARIOUS)
         if entry["track"]:
             found["track"] = entry["track"]
+        if entry.get("id"):
+            found.update(release_id=entry["id"], disc=entry.get("disc", ""), tracks=entry.get("tracks", ""))
         if years:
             found["year"] = min(years)
 

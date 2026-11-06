@@ -15,7 +15,7 @@ from .dupes import find_duplicates
 from .i18n import progress_line, t
 from .job import Cancelled, job
 from .lookup import Lookup, fetch_cover, fetch_lyrics, find_fpcalc
-from .names import clean, identify, normalize, safe_filename
+from .names import artist_list, clean, display_artist, identify, main_artist, normalize, safe_filename
 from .tags import FIELDS as TAG_FIELDS
 from .tags import write_tags
 
@@ -156,9 +156,33 @@ def planned_changes(track, found, overwrite):
     for field in TAG_FIELDS:
         new = found.get(field, "")
         current = clean(getattr(track, field))
-        if new and new != current and (overwrite or not current):
+        # Eine Liste wie "Dr. Dre/Nate Dogg" ist kein brauchbarer Interpret, der Treffer ersetzt sie
+        listed = field in ("artist", "albumartist") and len(artist_list(current)) > 1
+        if new and new != current and (overwrite or not current or listed):
             changes[field] = new
     return changes
+
+
+def add_release_details(matches, lookup):
+    """Ergänzt CD-Nummer, Titelzahl, Label und Album-Interpret; eine Abfrage je Album."""
+    releases = sorted({found["release_id"] for _, found in matches if found.get("release_id")})
+    details = {}
+    for number, release_id in enumerate(releases, 1):
+        job.step(number, len(releases), t("Album-Angaben laden"))
+        try:
+            details[release_id] = lookup.release(release_id)
+        except Exception as exc:  # ohne diese Angaben geht es trotzdem weiter
+            print(t("Album-Angaben nicht verfügbar: {reason}", reason=exc))
+    for _, found in matches:
+        info = details.get(found.get("release_id"))
+        if not info:
+            continue
+        if found.get("track") and found.get("tracks"):
+            found["track"] = f"{found['track']}/{found['tracks']}"
+        if found.get("disc"):
+            found["disc"] = f"{found['disc']}/{info['discs']}" if info.get("discs") else found["disc"]
+        found["label"] = found.get("label") or info.get("label", "")
+        found["albumartist"] = found.get("albumartist") or info.get("albumartist", "")
 
 
 def _search(args, tracks, lookup, wants_genres):
@@ -183,7 +207,7 @@ def _search(args, tracks, lookup, wants_genres):
             continue
         artist, title = identify(track)
         try:
-            found = lookup.find(track.path, artist, title, track.duration)
+            found = lookup.find(track.path, main_artist(artist), title, track.duration)
             failures = 0
         except Exception as exc:  # Eine Datei, die der Dienst ablehnt, darf den Lauf nicht beenden
             failures += 1
@@ -276,6 +300,7 @@ def cmd_tag(args):
     rules = genres.load_rules(APP_DIR) if wants_genres else {}
     matches, unresolved = _search(args, tracks, lookup, wants_genres)
     aligned = align_albums(matches)
+    add_release_details(matches, lookup)
     plan, rows = [], []
     for track, found in matches:
         if wants_genres and found.get("genre"):
@@ -336,7 +361,8 @@ def target_name(track, pattern, years=PERIOD_YEARS):
     values = {f: clean(getattr(track, f)) for f in TAG_FIELDS}
     if not (values["artist"] and values["title"]):
         return None
-    values["albumartist"] = values["albumartist"] or values["artist"]
+    values["artist"] = display_artist(values["artist"])
+    values["albumartist"] = display_artist(values["albumartist"]) or values["artist"]
     values["album"] = values["album"] or UNKNOWN_ALBUM
     # Bei mehreren Genres wie "Hip-Hop; Rap" zählt das erste, sonst entstünde ein Ordner je Kombination
     values["genre"] = re.split(r"\s*[;/,|]\s*", values["genre"])[0] or UNKNOWN_GENRE

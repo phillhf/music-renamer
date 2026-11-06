@@ -58,7 +58,7 @@ Erstelle zuerst eine Sicherung, dann geht es in dieser Reihenfolge:
 
 1. **Dubletten:** Links **1. Dubletten aussortieren** wählen und **2. Prüfen und ausführen** klicken. Prüfe die Liste und klicke auf **Ausgewählte ausführen**. Dubletten liegen danach im Ordner `Dubletten` in deiner Sammlung.
 2. **Metadaten:** Mit **Weiter zu Schritt 2** zur nächsten Seite, **Fehlende Cover einbetten** und **Fehlende Songtexte einbetten** ankreuzen, dann **2. Prüfen und ausführen** klicken. Bei großen Sammlungen dauert das lange. Prüfe die Liste und führe sie aus.
-3. **Umbenennen:** Mit **Weiter zu Schritt 3** zur nächsten Seite, Zielordner und Muster wählen und **2. Prüfen und ausführen** klicken. Prüfe die neuen Namen und führe sie aus.
+3. **Umbenennen:** Mit **Weiter zu Schritt 3** zur nächsten Seite, Zielordner wählen, bei **Ordner** ankreuzen, wie sortiert werden soll, zum Beispiel nach Zeitraum, und **2. Prüfen und ausführen** klicken. Prüfe die neuen Namen und führe sie aus.
 
 Hat etwas nicht gepasst, nimmst du es über **Verlauf** wieder zurück. Alle Optionen erklärt die [Bedienungsanleitung](Bedienung.md).
 

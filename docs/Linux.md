@@ -44,21 +44,21 @@ Lade die passende Datei von der [Release-Seite](https://github.com/phillhf/music
 Fenster-Version:
 
 ```bash
-wget https://github.com/phillhf/music-renamer/releases/download/v0.15.0/music-renamer_0.15.0_amd64.deb
+wget https://github.com/phillhf/music-renamer/releases/download/v0.16.0/music-renamer_0.16.0_amd64.deb
 ```
 
 ```bash
-sudo apt install ./music-renamer_0.15.0_amd64.deb
+sudo apt install ./music-renamer_0.16.0_amd64.deb
 ```
 
 Befehlszeile:
 
 ```bash
-wget https://github.com/phillhf/music-renamer/releases/download/v0.15.0/music-renamer-cli_0.15.0_amd64.deb
+wget https://github.com/phillhf/music-renamer/releases/download/v0.16.0/music-renamer-cli_0.16.0_amd64.deb
 ```
 
 ```bash
-sudo apt install ./music-renamer-cli_0.15.0_amd64.deb
+sudo apt install ./music-renamer-cli_0.16.0_amd64.deb
 ```
 
 **Wichtig:** Das `./` vor dem Dateinamen muss sein, sonst sucht `apt` im Internet nach dem Paket. Nutze `apt`, nicht `dpkg -i`, denn nur `apt` installiert die nötigen Abhängigkeiten mit.
@@ -70,7 +70,7 @@ Die Klangerkennung `fpcalc` ist in den `amd64`-Paketen enthalten. Für `arm64` i
 Zur Kontrolle kannst du die Prüfsumme vergleichen. Lade dafür auch die Datei `.deb.sha256` und starte im selben Ordner:
 
 ```bash
-sha256sum -c music-renamer_0.15.0_amd64.deb.sha256
+sha256sum -c music-renamer_0.16.0_amd64.deb.sha256
 ```
 
 ## Erster Start mit Fenster
@@ -80,7 +80,7 @@ sha256sum -c music-renamer_0.15.0_amd64.deb.sha256
 3. Erstelle eine Sicherung und arbeite die drei Schritte nacheinander ab:
    1. **Dubletten:** Links **1. Dubletten aussortieren** wählen und **2. Prüfen und ausführen** klicken. Prüfe die Liste und klicke auf **Ausgewählte ausführen**.
    2. **Metadaten:** Mit **Weiter zu Schritt 2** zur nächsten Seite, **Fehlende Cover einbetten** und **Fehlende Songtexte einbetten** ankreuzen, dann **2. Prüfen und ausführen** klicken. Prüfe die Liste und führe sie aus.
-   3. **Umbenennen:** Mit **Weiter zu Schritt 3** zur nächsten Seite, Zielordner und Muster wählen und **2. Prüfen und ausführen** klicken. Prüfe die neuen Namen und führe sie aus.
+   3. **Umbenennen:** Mit **Weiter zu Schritt 3** zur nächsten Seite, Zielordner wählen, bei **Ordner** ankreuzen, wie sortiert werden soll, zum Beispiel nach Zeitraum, und **2. Prüfen und ausführen** klicken. Prüfe die neuen Namen und führe sie aus.
 
 Hat etwas nicht gepasst, nimmst du es über **Verlauf** wieder zurück. Zum schnellen Umbenennen einzelner Dateien öffnest du links **Schnell umbenennen** und ziehst sie aus dem Dateimanager ins Fenster. Alle Optionen erklärt die [Bedienungsanleitung](Bedienung.md).
 
