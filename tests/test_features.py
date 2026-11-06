@@ -576,10 +576,34 @@ class MoreMetadata(Base):
         self.assertEqual((values["artist"], values["title"], values["year"], values["album"], values["genre"]),
                          ("A", "T", "2002", "Album", "Rock"))
 
+    def test_built_in_key_needs_no_setup(self):
+        db = sqlite3.connect(":memory:")
+        with mock.patch.dict(os.environ, {"ACOUSTID_KEY": ""}), mock.patch.object(lookup, "find_fpcalc", return_value="fp"):
+            finder = lookup.Lookup(db)
+        self.assertEqual((finder.api_key, finder.fpcalc), (lookup.APP_KEY, "fp"))
+
+    def test_rejected_own_key_falls_back_to_built_in(self):
+        db = sqlite3.connect(":memory:")
+        db.execute("CREATE TABLE lookups (key TEXT PRIMARY KEY, result TEXT)")
+        with mock.patch.dict(os.environ, {"ACOUSTID_KEY": "falsch"}), mock.patch.object(lookup, "find_fpcalc", return_value="fp"):
+            finder = lookup.Lookup(db)
+        keys = []
+
+        def fake(path, key, fpcalc):
+            keys.append(key)
+            if key == "falsch":
+                raise lookup.InvalidKey()
+            return 0, None
+        make_mp3(self.path("x.mp3"), 1)
+        with mock.patch.object(lookup, "_acoustid", fake), contextlib.redirect_stdout(io.StringIO()) as log:
+            finder._by_sound(self.path("x.mp3"))
+        self.assertEqual(keys, ["falsch", lookup.APP_KEY])
+        self.assertIn("eingebauten", log.getvalue())
+
     def test_rejected_acoustid_key_turns_sound_off_once(self):
         db = sqlite3.connect(":memory:")
         db.execute("CREATE TABLE lookups (key TEXT PRIMARY KEY, result TEXT)")
-        with mock.patch.dict(os.environ, {"ACOUSTID_KEY": "falsch"}), \
+        with mock.patch.dict(os.environ, {"ACOUSTID_KEY": ""}), \
                 mock.patch.object(lookup, "find_fpcalc", return_value="fpcalc"):
             finder = lookup.Lookup(db)
         rejected = urllib.error.HTTPError("u", 400, "Bad Request", None,
@@ -593,7 +617,7 @@ class MoreMetadata(Base):
             self.assertIsNone(finder.find(self.path("x.mp3"), "A", "T", 20))
             self.assertIsNone(finder.find(self.path("x.mp3"), "A", "T", 20))
         self.assertIsNone(finder.fpcalc)
-        self.assertEqual(log.getvalue().count("lehnt den eingetragenen Key ab"), 1)
+        self.assertEqual(log.getvalue().count("lehnt den Key ab"), 1)
 
     def test_service_reason_is_shown(self):
         refused = urllib.error.HTTPError("u", 400, "Bad Request", None, io.BytesIO(b'{"error": {"message": "zu kurz"}}'))

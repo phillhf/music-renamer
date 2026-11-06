@@ -238,9 +238,9 @@ class AcoustidRetry(Base):
     RECORDING = {"title": "Song", "first-release-date": "1999",
                  "artist-credit": [{"name": "Band", "artist": {"id": ""}}]}
 
-    def find(self, key="", level="normal"):
+    def find(self, key="", level="normal", fpcalc="fpcalc.exe"):
         with mock.patch.dict(os.environ, {"ACOUSTID_KEY": key}), \
-                mock.patch.object(lookup, "find_fpcalc", return_value="fpcalc.exe"), \
+                mock.patch.object(lookup, "find_fpcalc", return_value=fpcalc), \
                 mock.patch.object(lookup, "audio_key", return_value="a"), \
                 mock.patch.object(lookup, "_itunes", return_value=None):
             return lookup.Lookup(self.db, level).find("a.mp3", "Band", "Song", 100)
@@ -309,10 +309,10 @@ class AcoustidRetry(Base):
         with open(os.path.join(cli.REPORT_DIR, "nicht-gefunden.csv"), encoding="utf-8-sig") as f:
             self.assertIn(";72", f.read())
 
-    def test_key_added_later_retries_only_sound_recognition(self):
+    def test_sound_added_later_retries_only_sound_recognition(self):
         with mock.patch.object(lookup, "_search_mb", return_value=None) as search, \
                 mock.patch.object(lookup, "_acoustid", return_value=(0.9, self.RECORDING)) as acoustid:
-            self.assertIsNone(self.find())
+            self.assertIsNone(self.find(fpcalc=None))
             searches = search.call_count
             self.assertEqual(acoustid.call_count, 0)
 
@@ -323,11 +323,11 @@ class AcoustidRetry(Base):
             self.assertEqual(self.find("key")["year"], "1999")
             self.assertEqual((search.call_count, acoustid.call_count), (searches, 1))
 
-    def test_miss_without_key_is_not_searched_twice(self):
+    def test_miss_without_sound_is_not_searched_twice(self):
         with mock.patch.object(lookup, "_search_mb", return_value=None) as search:
-            self.find()
+            self.find(fpcalc=None)
             searches = search.call_count
-            self.assertIsNone(self.find())
+            self.assertIsNone(self.find(fpcalc=None))
             self.assertEqual(search.call_count, searches)
 
 

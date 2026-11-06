@@ -22,7 +22,6 @@ from .lookup import LEVELS, parse_accuracy
 from .review import ReviewWindow
 
 SETTINGS_PATH = os.path.join(cli.APP_DIR, "einstellungen.json")
-ACOUSTID_KEY_URL = "https://acoustid.org/new-application"
 STEPS = ("dubletten", "tags", "umbenennen")
 QUICK = "schnell"
 NAME_PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist} - {album} - {track} - {title}", "{title}")
@@ -274,15 +273,11 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self._update_level_box()
         key_row = ttk.Frame(advanced)
         key_row.pack(anchor="w", pady=(6, 0))
-        ttk.Label(key_row, text=t("AcoustID-Key:")).pack(side="left", padx=(0, 4))
+        ttk.Label(key_row, text=t("Eigener AcoustID-Key:")).pack(side="left", padx=(0, 4))
         ttk.Entry(key_row, textvariable=self.acoustid_key, width=18, show="*").pack(side="left")
-        link = tk.Label(key_row, text=t("Key holen"), fg="#0a58ca", cursor="hand2",
-                        font=("Segoe UI", 9, "underline"))
-        link.pack(side="left", padx=(6, 0))
-        link.bind("<Button-1>", lambda event: webbrowser.open(ACOUSTID_KEY_URL))
         ttk.Label(key_row, text=t("Discogs-Token:")).pack(side="left", padx=(14, 4))
         ttk.Entry(key_row, textvariable=self.discogs_token, width=18, show="*").pack(side="left")
-        ttk.Label(advanced, text=t("AcoustID: Lege dort eine Anwendung an und nimm deren Key. Der persönliche Benutzer-Key wird abgelehnt."),
+        ttk.Label(advanced, text=t("Die Klangerkennung ist eingebaut und braucht keinen Key. Ein eigener AcoustID-Key ist nur für Sonderfälle."),
                   style="Info.TLabel").pack(anchor="w", pady=(4, 0))
 
         label = t("Erweitert: Klangerkennung und Discogs")

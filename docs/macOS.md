@@ -92,7 +92,7 @@ Alles liegt unter `~/Library/Application Support/Music Renamer`. Im Finder errei
 |---|---|
 | `berichte` | CSV-Berichte, auch über **Berichte öffnen** erreichbar |
 | `data` | Sammlung, gespeicherte Treffer, Änderungsprotokolle |
-| `einstellungen.json` | deine Einstellungen, auch AcoustID-Key und Discogs-Token im Klartext |
+| `einstellungen.json` | deine Einstellungen, auch ein eigener AcoustID-Key und das Discogs-Token im Klartext |
 | `genre-regeln.json` | eigene Genre-Zuordnungen |
 
 ## Deinstallation
@@ -144,7 +144,7 @@ Ein Beispiel:
 python3 -m musicrenamer tags ~/Music/Sammlung --cover --songtexte
 ```
 
-Alle Befehle stehen in der [Befehlsreferenz](Befehlszeile.md). Für die Klangerkennung (`--klang` und AcoustID-Key) installierst du `fpcalc` mit Homebrew:
+Alle Befehle stehen in der [Befehlsreferenz](Befehlszeile.md). Für die Klangerkennung installierst du `fpcalc` mit Homebrew:
 
 ```bash
 brew install chromaprint

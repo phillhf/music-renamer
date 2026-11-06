@@ -290,10 +290,10 @@ def cmd_tag(args):
         lookup = Lookup(db, args.genauigkeit)
     except ValueError as exc:
         sys.exit(str(exc))
-    if lookup.api_key and lookup.fpcalc:
+    if lookup.fpcalc:
         print(t("Klangerkennung aktiv, Mindestwert {value} %.", value=f"{lookup.min_score * 100:g}"))
     else:
-        print(t("Hinweis: Ohne AcoustID-Key läuft die Suche nur über Name und Tags."))
+        print(t("Hinweis: fpcalc fehlt, die Suche läuft nur über Name und Tags."))
     wants_cover = getattr(args, "cover", False)
     wants_lyrics = getattr(args, "songtexte", False)
     wants_genres = getattr(args, "genres", False)

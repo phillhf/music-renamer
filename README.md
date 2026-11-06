@@ -39,7 +39,7 @@ Gelöscht wird nie etwas: Dubletten werden nur verschoben, und jeder Schritt lä
 - **Dubletten finden:** am identischen Audioinhalt, auf Wunsch auch am Klang in anderer Bitrate oder anderem Format
 - **Metadaten ergänzen:** Interpret, Titel, Album, Album-Interpret, Jahr, Genre, Track- und CD-Nummer und Label aus [MusicBrainz](https://musicbrainz.org), der iTunes-Suche und optional [Discogs](https://www.discogs.com)
 - **Cover und Songtexte einbetten:** aus dem [Cover Art Archive](https://coverartarchive.org) und von [LRCLIB](https://lrclib.net)
-- **Am Klang erkennen:** auch Dateien ohne Tags und ohne brauchbaren Namen, mit einem kostenlosen Key von [AcoustID](https://acoustid.org/new-application)
+- **Am Klang erkennen:** auch Dateien ohne Tags und ohne brauchbaren Namen, über [AcoustID](https://acoustid.org), ohne dass du etwas einrichten musst
 - **Umbenennen und sortieren:** nach frei wählbarem Muster, auf Wunsch in Ordner nach Interpret und Album oder nach Zeitraum wie 1980 - 1984 und Genre, auch in einen eigenen Zielordner
 - **Dateien ins Fenster ziehen:** direkt umbenennen, ohne Sammlung
 - **Prüfansicht, Tag-Editor, Verlauf:** jede Änderung vorher sehen, von Hand korrigieren und zurücknehmen

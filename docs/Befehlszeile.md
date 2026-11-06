@@ -304,7 +304,7 @@ Löscht alle gespeicherten Suchergebnisse und Klang-Fingerabdrücke, ohne Rückf
 music-renamer-cli vergessen
 ```
 
-Nützlich, wenn ein Lauf fehlerhaft war, etwa mit einem falschen AcoustID-Key. Das kostet Zeit, denn die nächste Suche dauert wieder so lange wie die erste.
+Nützlich, wenn ein Lauf fehlerhaft war. Das kostet Zeit, denn die nächste Suche dauert wieder so lange wie die erste.
 
 ## update
 
@@ -318,18 +318,14 @@ Unter Windows bringt das Update der Fenster-Version oder das neue Setup auch die
 
 ## Key und Token
 
-Die Befehlszeile liest beide aus Umgebungsvariablen, nicht aus den Einstellungen des Fensters.
+Die Klangerkennung ist eingebaut und braucht keinen Key. Für Discogs als zweite Quelle liest die Befehlszeile ein Token aus einer Umgebungsvariablen, nicht aus den Einstellungen des Fensters.
 
 | Variable | Wofür | Wo es ihn gibt |
 |---|---|---|
-| `ACOUSTID_KEY` | Klangerkennung für Dateien ohne brauchbaren Namen | kostenlos auf [acoustid.org](https://acoustid.org/new-application) |
 | `DISCOGS_TOKEN` | zweite Quelle, wenn MusicBrainz nichts findet | kostenlos unter [Discogs-Einstellungen](https://www.discogs.com/settings/developers) |
+| `ACOUSTID_KEY` | nur für Sonderfälle, ersetzt den eingebauten AcoustID-Key | eine eigene Anwendung auf [acoustid.org](https://acoustid.org/new-application) |
 
 Linux und macOS, gilt für das aktuelle Terminal:
-
-```bash
-export ACOUSTID_KEY="dein-key"
-```
 
 ```bash
 export DISCOGS_TOKEN="dein-token"
@@ -338,14 +334,10 @@ export DISCOGS_TOKEN="dein-token"
 Windows PowerShell, dauerhaft ab dem nächsten neuen Terminal:
 
 ```powershell
-setx ACOUSTID_KEY "dein-key"
-```
-
-```powershell
 setx DISCOGS_TOKEN "dein-token"
 ```
 
-Ohne Key meldet das Programm „Ohne AcoustID-Key läuft die Suche nur über Name und Tags“. Alles andere funktioniert trotzdem.
+Fehlt `fpcalc`, meldet das Programm „Hinweis: fpcalc fehlt, die Suche läuft nur über Name und Tags“. Alles andere funktioniert trotzdem.
 
 ## Der komplette Ablauf für eine Sammlung
 

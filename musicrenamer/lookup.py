@@ -36,6 +36,8 @@ PAUSE_STEP = 30
 SKIP_SECONDS = 600
 # Mindestwert der Klangerkennung je Stufe
 LEVELS = {"streng": 0.95, "normal": 0.85, "locker": 0.70}
+# Anwendungs-Key von Music Renamer bei AcoustID; wie bei Picard fest eingebaut, er erlaubt nur Abfragen
+APP_KEY = "ElU0uhaazW"
 
 
 def parse_accuracy(value):
@@ -366,8 +368,8 @@ class Cache:
 class Lookup:
     def __init__(self, db, level="normal"):
         self.cache = Cache(db)
-        self.api_key = os.environ.get("ACOUSTID_KEY", "")
-        self.fpcalc = find_fpcalc() if self.api_key else None
+        self.api_key = os.environ.get("ACOUSTID_KEY", "").strip() or APP_KEY
+        self.fpcalc = find_fpcalc()
         self.discogs_token = os.environ.get("DISCOGS_TOKEN", "")
         self.min_score = parse_accuracy(level)
         self.remembered = 0
@@ -427,10 +429,14 @@ class Lookup:
             try:
                 score, recording = _acoustid(path, self.api_key, self.fpcalc)
             except InvalidKey:
-                # Einmal melden und ohne Klangerkennung weitersuchen, statt jede Datei scheitern zu lassen
-                print(t("AcoustID lehnt den eingetragenen Key ab. Nötig ist der Key einer Anwendung, nicht der persönliche Benutzer-Key. Die Suche läuft ohne Klangerkennung weiter."))
-                self.fpcalc = None
-                return None
+                if self.api_key == APP_KEY:
+                    # Einmal melden und ohne Klangerkennung weitersuchen, statt jede Datei scheitern zu lassen
+                    print(t("AcoustID lehnt den Key ab. Die Suche läuft ohne Klangerkennung weiter."))
+                    self.fpcalc = None
+                    return None
+                print(t("AcoustID lehnt den eigenen Key ab, es geht mit dem eingebauten weiter."))
+                self.api_key = APP_KEY
+                return self._by_sound(path)
             entry = {"score": score, "result": self._details(recording, "acoustid", score) if recording else {}}
             self.cache.set(key, entry)
         if not entry["result"]:

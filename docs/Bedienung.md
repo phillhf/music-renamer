@@ -124,10 +124,10 @@ Das Programm liest Interpret und Titel aus den Tags, sonst aus dem Dateinamen. A
 | **Fehlende Cover einbetten** | vorhandene Cover bleiben immer unberührt |
 | **Fehlende Songtexte einbetten** | vorhandene Songtexte bleiben immer unberührt |
 | **Genres vereinheitlichen** | führt Varianten wie „Synth-Pop“ auf eine kurze Liste zurück, auch bei schon getaggten Dateien |
-| **Erweitert** | klappt die folgenden drei Einstellungen auf. Ist ein Key oder Token eingetragen, ist der Bereich schon offen |
+| **Erweitert** | klappt die folgenden Einstellungen auf. Normalerweise brauchst du sie nicht. Ist ein Key oder Token eingetragen, ist der Bereich schon offen |
 | **Genauigkeit Klangerkennung** | wie sicher ein Treffer am Klang sein muss: Streng (95 %), Normal (85 %) oder Locker (70 %) |
 | **eigener Wert** | Zahl von 1 bis 100, hat Vorrang vor der Auswahl |
-| **AcoustID-Key** | schaltet die Klangerkennung frei |
+| **Eigener AcoustID-Key** | nur für Sonderfälle. Die Klangerkennung ist eingebaut und braucht keinen Key. Wird ein eigener Key abgelehnt, nimmt das Programm von selbst den eingebauten |
 | **Discogs-Token** | schaltet Discogs als zweite Quelle frei |
 
 **Mehrere Interpreten:** Steht im Tag eine Liste wie `Dr. Dre/Nate Dogg/Snoop Dogg`, sucht das Programm mit dem ersten Interpreten und ersetzt die Liste durch die Schreibweise von MusicBrainz, zum Beispiel `Dr. Dre feat. Snoop Dogg`. Das passiert auch ohne **Vorhandene Tags ersetzen**. Gäste im Titel wie „Stan (ft. Dido)“ stören die Suche nicht.
@@ -136,17 +136,11 @@ Das Programm liest Interpret und Titel aus den Tags, sonst aus dem Dateinamen. A
 
 **Jahr von MusicBrainz:** Eingetragen wird das Jahr der ersten Veröffentlichung der gefundenen Aufnahme. Passt deine Datei zu einer späteren Fassung, etwa einer Neuaufnahme, steht dort deren Jahr. Prüfe bei Oldies die Jahre in der Prüfansicht.
 
-**Reihenfolge der Suche:** Zuerst MusicBrainz über den Namen, das braucht keinen Key. Findet das nichts, folgt die Klangerkennung und danach Discogs, falls jeweils Key oder Token eingetragen sind.
+**Reihenfolge der Suche:** Zuerst MusicBrainz über den Namen. Findet das nichts, folgt die Klangerkennung über [AcoustID](https://acoustid.org) und danach Discogs, falls ein Token eingetragen ist.
+
+**Klangerkennung:** Dateien wie `track01.mp3` ohne Tags und ohne brauchbaren Namen erkennt das Programm am Klang. Das ist eingebaut, du musst dafür nichts einrichten. Je Datei dauert das etwa eine Sekunde zusätzlich.
 
 **Der Trefferwert** in `tags-vorschau.csv` und der Prüfansicht sagt, wie gut Name oder Klang passen, nicht ob Album und Jahr stimmen. Für Treffer über den Namen gilt fest ein Mindestwert von 85 %. Die Genauigkeit lässt sich jederzeit ändern, ohne dass neu analysiert werden muss.
-
-**AcoustID-Key einrichten:** Dateien wie `track01.mp3` ohne Tags lassen sich nur am Klang erkennen.
-
-1. Klappe in Schritt 2 **Erweitert** auf und klicke auf **Key holen**. Die Seite von AcoustID öffnet sich.
-2. Melde dich an. Unter **New Application** registrierst du eine **Anwendung**, das ist für private Zwecke kostenlos. Name und Version sind beliebig, zum Beispiel „Music Renamer“ und „1.0“. Die Kontakt-E-Mail ist Pflicht, die Website kannst du leer lassen. Dann **Register** klicken.
-3. Kopiere den **API-Key dieser Anwendung** in das Feld **AcoustID-Key**.
-
-Achtung: AcoustID zeigt dir auch einen persönlichen Benutzer-Key, der sieht genauso aus. Den lehnt AcoustID für die Erkennung ab. Dann meldet das Programm einmal „AcoustID lehnt den eingetragenen Key ab“ und sucht ohne Klangerkennung weiter.
 
 Die Einstellungen werden beim Start eines Schritts gespeichert.
 
@@ -300,11 +294,11 @@ Fällt nur ein Zusatzdienst für Cover, Songtexte, Genres oder Discogs aus, läu
 
 | Problem | Lösung |
 |---|---|
-| Viele Dateien in `nicht-gefunden.csv` | Prüfe, ob Interpret und Titel stimmen. Trage einen AcoustID-Key ein, oder setze die Genauigkeit herunter und starte Schritt 2 neu |
+| Viele Dateien in `nicht-gefunden.csv` | Prüfe, ob Interpret und Titel stimmen, oder setze die Genauigkeit herunter und starte Schritt 2 neu |
 | Ein Treffer ist falsch | Wähle die Zeile in der Prüfansicht ab oder korrigiere sie per Doppelklick. Schon geschrieben: über den Verlauf zurücknehmen |
 | Eine Datei wird beim Umbenennen übersprungen | Interpret oder Titel fehlen. Schritt 2 oder Tag-Editor nutzen |
 | Fehlende Cover oder Songtexte | Nicht jedes Album hat ein Cover und nicht jeder Titel einen Songtext. Das Häkchen muss gesetzt sein, Dateien mit vorhandenem Cover bleiben unverändert |
-| „AcoustID lehnt den eingetragenen Key ab“ | Es ist der Benutzer-Key eingetragen. Lege auf acoustid.org eine Anwendung an und trage deren Key ein, siehe AcoustID-Key einrichten |
+| „AcoustID lehnt den eigenen Key ab“ | Ein eigener Key unter **Erweitert** ist ungültig. Das Programm nimmt dann den eingebauten, du kannst das Feld leeren |
 | „Abbruch: …“ während der Suche | 25 Dateien in Folge wurden abgelehnt, oft liegt es an einem falschen Key. Key prüfen und neu starten, die Treffer sind gespeichert |
 | „Fehler bei Datei: …“ im Protokoll | Die Datei ist vielleicht schreibgeschützt oder gerade in einem Player geöffnet. Die anderen Dateien laufen weiter |
 | Die Statuszeile meldet „Pausiert“ | Keine Verbindung. Das Programm macht von selbst weiter |
