@@ -317,16 +317,25 @@ Fällt nur ein Zusatzdienst für Cover, Songtexte, Genres oder Discogs aus, läu
 
 ## Fortschritt und Live-Fenster
 
-Ein Schritt besteht aus mehreren Abschnitten, zum Beispiel bei Schritt 2: Ordner durchsuchen, Sammlung lesen, Metadaten suchen, Alben zuordnen, Album-Angaben laden, Prüfansicht, Metadaten schreiben. Der Balken zeigt immer den laufenden Abschnitt, mit Anzahl und Restzeit, und beginnt bei jedem Abschnitt wieder bei 0. Zwischen zwei Abschnitten und bei Arbeit, deren Menge vorher nicht feststeht, läuft ein Block hin und her. Die Zeile darunter sagt, was gerade passiert. Ist der Schritt fertig, ist der Balken leer und links steht „Ausgeführt am …“.
+Ein Schritt besteht aus mehreren Abschnitten, zum Beispiel bei Schritt 2: Ordner durchsuchen, Sammlung lesen, Metadaten suchen, Alben zuordnen, Album-Angaben laden, Prüfansicht, Metadaten schreiben. Der Balken zeigt immer den laufenden Abschnitt, mit Anzahl und Restzeit, und beginnt bei jedem Abschnitt wieder bei 0. Zwischen zwei Abschnitten und bei Arbeit, deren Menge vorher nicht feststeht, läuft ein Block hin und her. Die Zeile darunter sagt, was gerade passiert, und die zweite Zeile, an welcher Datei. Ist der Schritt fertig, ist der Balken leer und links steht „Ausgeführt am …“.
 
-**Live-Fenster:** Der Knopf unten öffnet ein Konsolenfenster. Darin erscheint mit Uhrzeit jede Datei, die gerade bearbeitet wird, zum Beispiel:
+**Live-Fenster:** Der Knopf unten öffnet ein Konsolenfenster. Darin steht mit Uhrzeit jede Datei, bevor das Programm mit ihr anfängt, mit ihrer Nummer im Abschnitt. Eingerückt darunter steht, was mit ihr geschieht: jede Anfrage an einen Dienst samt Suchbegriff, jede Wartezeit, jeder neue Versuch und das Ergebnis. So siehst du auch, woran es gerade hängt. Ein echter Ausschnitt:
 
 ```
-14:03:12  » Metadaten suchen: 4.210 von 28.000, Restzeit etwa 6 h 20 min
-14:03:12  Gefunden: C:\Musik\Prince\Kiss.mp3 → Prince - Kiss (MusicBrainz, 98 %)
-14:03:13  Nicht gefunden: C:\Musik\track01.mp3
-14:03:14  Pausiert, keine Verbindung zu musicbrainz.org seit 2 min
+12:47:53  » Metadaten suchen: 1 von 4
+12:47:53  [1/4] Suche: C:\Ipod Music\- 01 Scooter - Scooter - Excess All Areas.mp3
+12:47:53        Suche nach Name: Scooter - Excess All Areas
+12:47:53        Anfrage an musicbrainz.org: /ws/2/recording (recording:"Excess All Areas" AND artist:"Scooter")
+12:47:53        keine Antwort von musicbrainz.org, neuer Versuch in 2 s
+12:47:55        Anfrage an musicbrainz.org: /ws/2/recording (recording:"Excess All Areas" AND artist:"Scooter")
+12:47:55        nichts gefunden, versuche Interpret und Titel vertauscht
+12:47:55        warte 1.0 s, musicbrainz.org erlaubt nur begrenzt viele Anfragen
+12:47:56        Anfrage an musicbrainz.org: /ws/2/recording (recording:"Scooter" AND artist:"Excess All Areas")
+12:47:57        kein sicherer Treffer
+12:47:57  [2/4] Suche: C:\Ipod Music\- 01-limp_bizkit-take_a_look_around_(theme)-apc.mp3
 ```
+
+Zeilen mit `»` zeigen den Stand des Abschnitts, etwa alle zehn Sekunden. In den anderen Abschnitten steht dort, welcher Ordner durchsucht, welche Datei gelesen, verglichen, geschrieben oder verschoben wird.
 
 Du kannst es jederzeit öffnen und schließen, auch mitten im Lauf, das ändert am Lauf nichts. Unter Windows ist es ein PowerShell-Fenster, auf dem Mac das Terminal, unter Linux das Standard-Terminal. Alles steht auch in der Datei `live-protokoll.txt` im Datenordner. Wird sie größer als 20 MB, beginnt beim nächsten Start eine neue, die alte bleibt als `live-protokoll.txt.alt`.
 

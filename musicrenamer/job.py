@@ -13,6 +13,7 @@ class Job:
     def __init__(self):
         self.listener = None
         self.detail_listener = None  # bekommt jede Einzelmeldung, etwa für das Live-Fenster
+        self.current = ""  # die letzte Einzelmeldung, für die Statuszeile
         self._cancel = threading.Event()
         self._started = 0.0
         self._last_report = 0.0
@@ -21,6 +22,7 @@ class Job:
 
     def reset(self):
         self._cancel.clear()
+        self.current = ""
         self._phase = ""
         self._position = (0, 0)
 
@@ -48,10 +50,20 @@ class Job:
         if self.listener:
             self.listener(0, 0, text, None)
 
-    def detail(self, text):
-        """Eine Zeile für das Live-Fenster, etwa welche Datei gerade dran ist."""
+    def detail(self, text, sub=False):
+        """Eine Zeile für das Live-Fenster, etwa welche Datei gerade dran ist.
+
+        Hauptzeilen tragen die Position wie [4210/28000], Unterzeilen (sub) sind eingerückt
+        und zeigen, was mit der Datei gerade geschieht, etwa eine Anfrage oder eine Wartezeit.
+        """
+        done, total = self._position
+        if sub:
+            line = f"      {text}"
+        else:
+            line = f"[{done}/{total}] {text}" if total else text
+            self.current = text
         if self.detail_listener:
-            self.detail_listener(text)
+            self.detail_listener(line)
 
     def wait(self, seconds):
         """Wartet; Abbrechen wirkt sofort und die Pause zählt nicht zur Restzeit."""

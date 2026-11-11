@@ -7,6 +7,9 @@ Alben enthalten; sie werden nacheinander herausgelöst.
 import os
 from collections import Counter, defaultdict
 
+from .i18n import t
+from .job import job
+
 MIN_TRACKS = 3
 MIN_SHARE = 0.6
 CLEAR_MAJORITY = 5  # so viele Titel eines Albums reichen auch in einem gemischten Ordner
@@ -53,7 +56,9 @@ def align_albums(matches):
     for track, found in matches:
         folders[os.path.dirname(track.path)].append(found)
     aligned = 0
-    for remaining in folders.values():
+    for number, (folder, remaining) in enumerate(folders.items(), 1):
+        job.step(number, len(folders), t("Alben zuordnen"))
+        job.detail(t("Album-Ordner: {path}", path=folder))
         while group := _best_group(remaining):
             members = [(found, _entry(found, group)) for found in remaining if _entry(found, group)]
             _assign(members, group)

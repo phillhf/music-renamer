@@ -52,6 +52,11 @@ def level_label(level):
 LEVEL_LABELS = {level_label(level): level for level in LEVELS}
 
 
+def shorten(text, limit=120):
+    """Kürzt lange Pfade in der Mitte, damit Anfang und Dateiname lesbar bleiben."""
+    return text if len(text) <= limit else text[:limit // 2 - 1] + "…" + text[-(limit // 2):]
+
+
 class QueueWriter:
     def __init__(self, target, live=None):
         self.target, self.live = target, live
@@ -147,6 +152,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.period_years = tk.StringVar(value=str(settings.get("zeitraum_jahre", cli.PERIOD_YEARS)))
         self.language = tk.StringVar(value=next(k for k, v in i18n.LANGUAGES.items() if v == i18n.language))
         self.progress_text = tk.StringVar()
+        self.current_text = tk.StringVar()
         self.status = settings.get("status", {})
         self.running_step = None
         self.review_cancelled = False
@@ -220,7 +226,11 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.progress.pack(side="left", fill="x", expand=True)
         self.cancel_button = ttk.Button(progress, text=t("Abbrechen"), command=job.cancel, state="disabled")
         self.cancel_button.pack(side="left", padx=(6, 0))
-        ttk.Label(main, textvariable=self.progress_text).grid(row=5, column=0, sticky="w", pady=(2, 6))
+        status = ttk.Frame(main)
+        status.grid(row=5, column=0, sticky="ew", pady=(2, 6))
+        ttk.Label(status, textvariable=self.progress_text).pack(anchor="w")
+        # Die Datei, an der gerade gearbeitet wird; ausführlich im Live-Fenster
+        ttk.Label(status, textvariable=self.current_text, style="Info.TLabel").pack(anchor="w")
 
         bottom = ttk.Frame(main)
         bottom.grid(row=6, column=0, sticky="ew")
@@ -546,10 +556,14 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
             self.progress["value"] = 0
             self.live_phase = None
             self.progress_text.set("")
+            self.current_text.set("")
             self.running_step = None
             self._refresh_nav()
 
     def _drain_events(self):
+        if self.running_step or str(self.cancel_button.cget("state")) == "normal":
+            current = job.current
+            self.current_text.set(t("Gerade: {item}", item=shorten(current)) if current else "")
         while True:
             try:
                 kind, value = self.events.get_nowait()

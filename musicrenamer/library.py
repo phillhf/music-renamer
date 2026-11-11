@@ -78,6 +78,7 @@ def connect(db_path):
 def find_audio(root, exclude=None):
     exclude = system.fold(os.path.abspath(exclude)) if exclude else None
     for folder, subdirs, names in os.walk(root):
+        job.detail(t("Ordner: {path}", path=folder))
         if exclude:
             subdirs[:] = [d for d in subdirs if system.fold(
                 os.path.abspath(os.path.join(folder, d))) != exclude]
@@ -194,6 +195,7 @@ def scan(root, db, exclude=None, progress=print):
             errors.append((path, str(exc)))
             continue
         if known.get(path) == (stat.st_size, stat.st_mtime):
+            job.detail(t("Unverändert: {path}", path=path))
             continue
         read += 1
         job.detail(t("Lesen: {path}", path=path))

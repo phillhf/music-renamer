@@ -177,11 +177,13 @@ def planned_changes(track, found, overwrite):
 
 def add_release_details(matches, lookup):
     """Ergänzt CD-Nummer, Titelzahl, Label und Album-Interpret; eine Abfrage je Album."""
-    releases = sorted({found["release_id"] for _, found in matches if found.get("release_id")})
+    names = {found["release_id"]: f'{found.get("albumartist") or found.get("artist", "")} - {found.get("album", "")}'
+             for _, found in matches if found.get("release_id")}
+    releases = sorted(names)
     details = {}
     for number, release_id in enumerate(releases, 1):
         job.step(number, len(releases), t("Album-Angaben laden"))
-        job.detail(t("Album-Angaben: {id}", id=release_id))
+        job.detail(t("Album-Angaben: {album}", album=names[release_id]))
         try:
             details[release_id] = lookup.release(release_id)
         except Exception as exc:  # ohne diese Angaben geht es trotzdem weiter
@@ -220,6 +222,7 @@ def _search(args, tracks, lookup, wants_genres):
                 matches.append((track, {"source": "genre"}))
             continue
         artist, title = identify(track)
+        job.detail(t("Suche: {path}", path=track.path))
         try:
             found = lookup.find(track.path, main_artist(artist), title, track.duration)
             failures = 0
@@ -230,14 +233,14 @@ def _search(args, tracks, lookup, wants_genres):
             print(t("Fehler bei {path}: {reason}", path=track.path, reason=exc))
             found = None
         if found and not found.get("rejected"):
-            job.detail(t("Gefunden: {path} → {artist} - {title} ({source}, {score} %)", path=track.path,
-                         artist=found.get("artist", ""), title=found.get("title", ""),
-                         source=found.get("source", ""), score=found.get("score", "")))
+            job.detail(t("Treffer: {artist} - {title} ({source}, {score} %)", artist=found.get("artist", ""),
+                         title=found.get("title", ""), source=found.get("source", ""),
+                         score=found.get("score", "")), sub=True)
             matches.append((track, found))
         elif done and wants_genres:
             matches.append((track, {"source": "genre"}))
         elif not done:
-            job.detail(t("Nicht gefunden: {path}", path=track.path))
+            job.detail(t("kein sicherer Treffer"), sub=True)
             unresolved.append((track.path, artist, title, (found or {}).get("score", "")))
     if lookup.remembered:
         print(t("Aus früheren Läufen übernommen: {count} Titel.", count=lookup.remembered))
@@ -270,6 +273,7 @@ def _apply_tags(chosen, plan, cache):
                 job.detail(t("Schreiben: {path}", path=track.path))
                 if row["Cover"]:
                     if found["group"] not in covers:
+                        job.detail(t("Cover für {album} laden", album=found.get("album", "")), sub=True)
                         # Nur das aktuelle Album behalten, bei 70.000 Titeln wäre der Speicher sonst voll
                         covers = {found["group"]: _fetch_once(cache, f"no-cover:{found['group']}",
                                                               lambda: fetch_cover(found["group"]))}
@@ -279,6 +283,7 @@ def _apply_tags(chosen, plan, cache):
                     artist = changes.get("artist") or found.get("artist", clean(track.artist))
                     title = changes.get("title") or found.get("title", clean(track.title))
                     album = changes.get("album") or found.get("album", "")
+                    job.detail(t("Songtext suchen"), sub=True)
                     text = _fetch_once(cache, f"no-lyrics:{normalize(artist)}|{normalize(title)}",
                                        lambda: fetch_lyrics(artist, title, album, track.duration))
                     if text:
@@ -432,6 +437,7 @@ def plan_renames(tracks, pattern, root, taken, destination=None, years=PERIOD_YE
     sorts = "/" in pattern or destination
     for number, track in enumerate(tracks, 1):
         job.step(number, len(tracks), t("Neue Namen planen"))
+        job.detail(track.path)
         name = target_name(track, pattern, years)
         if not name:
             skipped += 1

@@ -50,6 +50,7 @@ def _load(tracks, db, fpcalc):
     prints = {}
     for number, track in enumerate(tracks, 1):
         job.step(number, len(tracks), t("Klangvergleich"))
+        job.detail(track.path)
         # Am Audioinhalt gemerkt, damit Umbenennen keine neue Analyse auslöst
         key = f"fingerprint:{audio_key(track.path)}"
         row = db.execute("SELECT result FROM lookups WHERE key = ?", (key,)).fetchone()
@@ -93,6 +94,7 @@ def find_groups(tracks, db, fpcalc, progress=print):
     pairs = _candidates(prints)
     for number, (a, b) in enumerate(pairs, 1):
         job.step(number, len(pairs), t("Fingerabdrücke vergleichen"))
+        job.detail(f"{a} ↔ {b}")
         gap = abs((by_path[a].duration or 0) - (by_path[b].duration or 0))
         if gap <= MAX_DURATION_GAP and root(a) != root(b) \
                 and similarity(prints[a], prints[b]) >= MIN_SIMILARITY:

@@ -70,6 +70,10 @@ class Filenames(unittest.TestCase):
             "Queen - Bohemian Rhapsody [www.mp3site.com].mp3": ("Queen", "Bohemian Rhapsody"),
             "Queen - Bohemian Rhapsody - Kopie.mp3": ("Queen", "Bohemian Rhapsody"),
             "Queen - Bohemian Rhapsody (1).mp3": ("Queen", "Bohemian Rhapsody"),
+            "- 01 Scooter - Scooter - Excess All Areas.mp3": ("Scooter", "Excess All Areas"),
+            "01-limp_bizkit-take_a_look_around-apc.mp3": ("Limp Bizkit", "Take a look around"),
+            "- 01-limp_bizkit-take_a_look_around_(theme)-apc.mp3": ("Limp Bizkit", "Take a look around (theme)"),
+            "Jay-Z - 99 Problems.mp3": ("Jay-Z", "99 Problems"),
         }
         for name, expected in cases.items():
             self.assertEqual(parse_filename(os.path.join("X", "Musik", name)), expected, name)

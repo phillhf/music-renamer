@@ -702,8 +702,27 @@ class Progress(Base):
         stages = [text for done, total, text, left in reports]
         for stage in ("Ordner durchsuchen", "Sammlung lesen", "Sammlung laden", "Neue Namen planen", "Dateien umbenennen"):
             self.assertIn(stage, stages)
-        self.assertTrue(any(line.startswith("Lesen: ") for line in details))
+        self.assertTrue(any(line.startswith("[1/3] Lesen: ") for line in details))
+        self.assertTrue(any(line.startswith("Ordner: ") for line in details))
         self.assertTrue(any("→" in line for line in details))
+
+    def test_search_names_the_file_before_asking_and_every_request(self):
+        make_mp3(self.path("Prince - Kiss.mp3"), 1)
+        details = []
+        with mock.patch.object(job, "detail_listener", details.append), \
+                mock.patch.object(lookup, "find_fpcalc", return_value=None), \
+                mock.patch.object(lookup.urllib.request, "urlopen", side_effect=lambda *a, **k: io.BytesIO(b'{"recordings": []}')), \
+                mock.patch.object(lookup, "_last_call", {}), \
+                contextlib.redirect_stdout(io.StringIO()):
+            cli.cmd_tag(Namespace(ordner=self.root, apply=False, ueberschreiben=False, limit=None,
+                                  genauigkeit="normal", cover=False, songtexte=False, genres=False))
+        search = next(i for i, line in enumerate(details) if line.startswith("[1/1] Suche: "))
+        following = details[search + 1:]
+        self.assertTrue(following[0].strip().startswith("Suche nach Name: Prince - Kiss"))
+        self.assertTrue(any("Anfrage an musicbrainz.org: /ws/2/recording" in line for line in following))
+        self.assertTrue(any("vertauscht" in line for line in following))
+        self.assertTrue(any(line.strip() == "kein sicherer Treffer" for line in following))
+        self.assertTrue(all(line.startswith("      ") for line in following[:3]))
 
 
 class GenreMerging(Base):

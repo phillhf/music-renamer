@@ -103,7 +103,10 @@ def _fetch(url, min_interval, data=None, headers=None, check=None, optional=Fals
     while True:
         wait = _last_call.get(host, 0) + min_interval - time.monotonic()
         if wait > 0:
+            if wait >= 0.5:
+                job.detail(t("warte {seconds} s, {host} erlaubt nur begrenzt viele Anfragen", seconds=f"{wait:.1f}", host=host), sub=True)
             time.sleep(wait)
+        job.detail(t("Anfrage an {host}: {what}", host=host, what=_describe(url)), sub=True)
         _last_call[host] = time.monotonic()
         request = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT, **(headers or {})})
         try:
@@ -129,6 +132,7 @@ def _fetch(url, min_interval, data=None, headers=None, check=None, optional=Fals
             pass
         failures += 1
         if failures < RETRIES:
+            job.detail(t("keine Antwort von {host}, neuer Versuch in {seconds} s", host=host, seconds=2 ** failures), sub=True)
             job.wait(2 ** failures)
             continue
         if optional and not paused and _online():
@@ -140,6 +144,14 @@ def _fetch(url, min_interval, data=None, headers=None, check=None, optional=Fals
             print(t("Achtung: keine Verbindung zu {host}. Pausiert, es geht von selbst weiter, sobald sie wieder steht.", host=host))
         job.notice(t("Pausiert, keine Verbindung zu {host} seit {time}", host=host, time=format_duration(time.monotonic() - paused)))
         job.wait(PAUSE_STEP)
+
+
+def _describe(url):
+    """Kurz, was eine Anfrage will, damit das Live-Fenster lesbar bleibt."""
+    parts = urllib.parse.urlparse(url)
+    query = urllib.parse.parse_qs(parts.query)
+    words = query.get("query") or query.get("term") or query.get("track_name") or query.get("track") or []
+    return parts.path + (f" ({words[0].replace(' AND NOT comment:live', '')[:150]})" if words else "")
 
 
 def _get(url, min_interval, data=None, optional=False):
@@ -382,6 +394,7 @@ class Lookup:
         # Der Klang ist sicherer als ein zweiter Namensabgleich, darum zuerst AcoustID
         result = self._by_sound(path) if self.fpcalc else None
         if (not result or result.get("rejected")) and self.discogs_token:
+            job.detail(t("Suche bei Discogs"), sub=True)
             return self._by_discogs(artist, title) or result
         return result
 
@@ -410,13 +423,19 @@ class Lookup:
 
     def _by_name(self, artist, title, duration):
         if not (artist and title):
+            job.detail(t("Interpret oder Titel nicht erkennbar, die Suche über den Namen entfällt"), sub=True)
             return {}
         key = f"song:{normalize(artist)}|{normalize(title)}|{round((duration or 0) / 10)}"
         cached = self.cache.get(key)
         if cached is not None:
             self.remembered += 1
+            job.detail(t("aus einem früheren Lauf bekannt, keine Anfrage nötig"), sub=True)
             return cached
-        found = _search_mb(artist, title, duration) or _search_mb(title, artist, duration)
+        job.detail(t("Suche nach Name: {artist} - {title}", artist=artist, title=title), sub=True)
+        found = _search_mb(artist, title, duration)
+        if not found:
+            job.detail(t("nichts gefunden, versuche Interpret und Titel vertauscht"), sub=True)
+            found = _search_mb(title, artist, duration)
         result = self._details(found[1], "musicbrainz", found[0]) if found else {}
         self.cache.set(key, result)
         return result
@@ -425,7 +444,10 @@ class Lookup:
         # Am Audioinhalt gemerkt, damit Umbenennen keine neue Analyse auslöst
         key = f"acoustid:{audio_key(path)}"
         entry = self.cache.get(key)
+        if entry:
+            job.detail(t("Klang aus einem früheren Lauf bekannt"), sub=True)
         if not entry:
+            job.detail(t("Klangerkennung: Fingerabdruck berechnen"), sub=True)
             try:
                 score, recording = _acoustid(path, self.api_key, self.fpcalc)
             except InvalidKey:

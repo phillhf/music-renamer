@@ -56,13 +56,22 @@ def display_artist(value):
 def parse_filename(path):
     """Leitet (Interpret, Titel) aus Datei- und Ordnername ab."""
     stem = os.path.splitext(os.path.basename(path))[0]
+    # Szene-Namen wie "01-limp_bizkit-take_a_look_around-apc" trennen mit "-" ohne Leerzeichen
+    scene = "_" in stem and " " not in stem.strip(" -.") and "-" in stem.strip(" -.")
     stem = COPY_SUFFIX.sub("", stem.replace("_", " "))
     stem = NOISE_BRACKET.sub("", stem)
-    stem = TRACK_PREFIX.sub("", stem)
+    # Ein vorangestelltes "- " wie in "- 01 Scooter - Excess" verdeckt sonst die Tracknummer
+    stem = TRACK_PREFIX.sub("", stem.strip(" -."))
     stem = re.sub(r"\s+", " ", stem).strip(" -.")
     parts = [p.strip() for p in re.split(r"\s+[-–—]\s+", stem) if p.strip()]
     if len(parts) >= 2:
         return parts[0], parts[-1]
+    if scene:
+        pieces = [p.strip() for p in stem.split("-") if p.strip()]
+        if len(pieces) >= 3 and re.fullmatch(r"[a-z0-9]{2,6}", pieces[-1]):
+            pieces = pieces[:-1]  # Kürzel der Gruppe am Ende
+        if len(pieces) >= 2:
+            return pieces[0].title(), " - ".join(pieces[1:]).capitalize()
     if not stem or is_junk(stem):
         return "", ""
     folders = os.path.normpath(path).split(os.sep)[:-1]
