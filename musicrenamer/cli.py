@@ -84,6 +84,8 @@ def write_report(name, header, rows):
 def review(args, title, columns, editable, rows):
     """Lässt die Oberfläche die Zeilen prüfen; None heißt abgebrochen."""
     hook = getattr(args, "review", None)
+    if hook and args.apply and rows:
+        job.activity(t("Prüfansicht offen, wartet auf deine Auswahl"))
     return hook(title, columns, editable, rows) if hook and args.apply and rows else rows
 
 
@@ -99,6 +101,7 @@ def prepare(args):
     print(t("Scanne {path} ...", path=root))
     # Der Dubletten-Ordner liegt in der Sammlung, gehört aber zu keinem Schritt
     errors = library.scan(root, db, dupes_dir(args))
+    job.activity(t("Sammlung laden"))
     if errors:
         path = write_report("defekte-dateien.csv", ("Datei", "Fehler"), errors)
         print(t("Dateien nicht lesbar: {count}, siehe {path}", count=len(errors), path=path))
@@ -149,6 +152,7 @@ def cmd_dupes(args):
             job.step(number, len(moves), t("Dateien verschieben"))
             relative = os.path.relpath(row["Datei"], root)
             target = journaling.unique_path(os.path.join(target_dir, relative))
+            job.detail(t("Verschieben: {path}", path=row["Datei"]))
             try:
                 journaling.move_file(row["Datei"], target, journal)
                 moved += 1
@@ -177,6 +181,7 @@ def add_release_details(matches, lookup):
     details = {}
     for number, release_id in enumerate(releases, 1):
         job.step(number, len(releases), t("Album-Angaben laden"))
+        job.detail(t("Album-Angaben: {id}", id=release_id))
         try:
             details[release_id] = lookup.release(release_id)
         except Exception as exc:  # ohne diese Angaben geht es trotzdem weiter
@@ -210,6 +215,7 @@ def _search(args, tracks, lookup, wants_genres):
         job.step(number, len(tracks), t("Metadaten suchen"))
         done = complete(track)
         if done and os.path.dirname(track.path) not in open_folders:
+            job.detail(t("Schon vollständig: {path}", path=track.path))
             if wants_genres:
                 matches.append((track, {"source": "genre"}))
             continue
@@ -224,10 +230,14 @@ def _search(args, tracks, lookup, wants_genres):
             print(t("Fehler bei {path}: {reason}", path=track.path, reason=exc))
             found = None
         if found and not found.get("rejected"):
+            job.detail(t("Gefunden: {path} → {artist} - {title} ({source}, {score} %)", path=track.path,
+                         artist=found.get("artist", ""), title=found.get("title", ""),
+                         source=found.get("source", ""), score=found.get("score", "")))
             matches.append((track, found))
         elif done and wants_genres:
             matches.append((track, {"source": "genre"}))
         elif not done:
+            job.detail(t("Nicht gefunden: {path}", path=track.path))
             unresolved.append((track.path, artist, title, (found or {}).get("score", "")))
     if lookup.remembered:
         print(t("Aus früheren Läufen übernommen: {count} Titel.", count=lookup.remembered))
@@ -257,6 +267,7 @@ def _apply_tags(chosen, plan, cache):
             track, found = plan[row["id"]]
             changes = {field: row[field] for field in TAG_FIELDS if row[field]}
             try:
+                job.detail(t("Schreiben: {path}", path=track.path))
                 if row["Cover"]:
                     if found["group"] not in covers:
                         # Nur das aktuelle Album behalten, bei 70.000 Titeln wäre der Speicher sonst voll
@@ -307,8 +318,10 @@ def cmd_tag(args):
     wants_genres = getattr(args, "genres", False)
     rules = genres.load_rules(APP_DIR) if wants_genres else {}
     matches, unresolved = _search(args, tracks, lookup, wants_genres)
+    job.activity(t("Alben zuordnen"))
     aligned = align_albums(matches)
     add_release_details(matches, lookup)
+    job.activity(t("Änderungen zusammenstellen"))
     plan, rows = [], []
     for track, found in matches:
         if wants_genres and found.get("genre"):
@@ -417,7 +430,8 @@ def plan_renames(tracks, pattern, root, taken, destination=None, years=PERIOD_YE
     rows, skipped = [], 0
     # Ein Muster mit Ordnern sortiert die ganze Sammlung, sonst bleibt jede Datei in ihrem Ordner
     sorts = "/" in pattern or destination
-    for track in tracks:
+    for number, track in enumerate(tracks, 1):
+        job.step(number, len(tracks), t("Neue Namen planen"))
         name = target_name(track, pattern, years)
         if not name:
             skipped += 1
@@ -453,6 +467,7 @@ def run_renames(args, rows, skipped, root):
         for number, row in enumerate(rows, 1):
             job.step(number, len(rows), t("Dateien umbenennen"))
             source, target = row["Alt"], row["Neu"]
+            job.detail(f"{source} → {target}")
             if os.path.exists(target) and not os.path.samefile(source, target):
                 print(t("Übersprungen, Ziel existiert: {path}", path=target))
                 continue
@@ -486,6 +501,7 @@ def cmd_rename(args):
     if destination:
         print(t("Zielordner: {path}. Dateien ohne Interpret oder Titel bleiben, wo sie sind.", path=destination))
         # Was dort schon liegt, auch Nicht-Musik, darf nicht überschrieben werden
+        job.activity(t("Zielordner prüfen"))
         taken |= files_below(destination)
     rows, skipped = plan_renames(tracks, args.muster, root, taken, destination, years)
     run_renames(args, rows, skipped, root)
@@ -552,6 +568,7 @@ def write_genres(changes):
     try:
         for number, (track, target) in enumerate(changes, 1):
             job.step(number, len(changes), t("Genres schreiben"))
+            job.detail(f"{track.path}: {track.genre} → {target}")
             try:
                 journal.record(action="tag", path=track.path, old={"genre": track.genre}, new={"genre": target})
                 write_tags(track.path, {"genre": target})
@@ -627,6 +644,9 @@ def console_progress():
 
     def report(done, total, text, left):
         now = time.monotonic()
+        if not total:  # Arbeit ohne bekannte Menge: immer zeigen, sie kann dauern
+            print(progress_line(done, total, text, left), flush=True)
+            return
         if now - last[0] >= PROGRESS_GAP:
             last[0] = now
             print(progress_line(done, total, text, left), flush=True)

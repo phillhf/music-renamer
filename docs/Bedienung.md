@@ -15,6 +15,7 @@ So benutzt du Music Renamer mit Fenster. Unter Windows, macOS und Linux sieht da
 - [Tag-Editor](#tag-editor)
 - [Verlauf und Zurücknehmen](#verlauf-und-zurücknehmen)
 - [Große Sammlungen und schlechtes Internet](#große-sammlungen-und-schlechtes-internet)
+- [Fortschritt und Live-Fenster](#fortschritt-und-live-fenster)
 - [Berichte](#berichte)
 - [Wenn etwas nicht klappt](#wenn-etwas-nicht-klappt)
 
@@ -38,10 +39,11 @@ Das Fenster führt dich Schritt für Schritt:
 | **Schritt-Seite** rechts | nur der gewählte Schritt: oben ein Satz, was er tut, darunter seine Optionen und die Knöpfe **1. Vorschau ansehen** und **2. Prüfen und ausführen**. **Weiter zu Schritt …** führt zum nächsten |
 | **Schnell umbenennen** links unten | eigene Seite zum Hineinziehen einzelner Dateien |
 | **Protokoll** | zeigt, was das Programm tut |
-| **Fortschrittsbalken und Abbrechen** | Stand und Restzeit des laufenden Schritts |
+| **Fortschrittsbalken und Abbrechen** | Stand und Restzeit des laufenden Abschnitts. Läuft ein grüner Block hin und her, arbeitet das Programm an etwas, dessen Dauer es nicht kennt. Darunter steht, was es gerade tut |
 | **Verlauf** | ausgeführte Schritte ansehen und zurücknehmen |
 | **Berichte öffnen** | öffnet den Ordner mit den CSV-Berichten |
 | **Tag-Editor** | Tags von Hand ändern |
+| **Live-Fenster** | öffnet ein Konsolenfenster, in dem jede bearbeitete Datei erscheint |
 | **Genres** | Liste aller Genres der Sammlung, zusammengehörige zu einem Genre zusammenfassen |
 | **Neu anfangen** | löscht alle gespeicherten Suchergebnisse und Klang-Fingerabdrücke und setzt den Status aller Schritte zurück. Deine Musik und der Verlauf bleiben, Zurücknehmen geht weiterhin |
 | **Hilfe** | öffnet diese Anleitung im Browser, auch während ein Schritt läuft |
@@ -312,6 +314,21 @@ Fällt nur ein Zusatzdienst für Cover, Songtexte, Genres oder Discogs aus, läu
 - Geschrieben wird erst nach der kompletten Suche und deiner Prüfung. Bis dahin ändert sich an den Dateien nichts.
 - Schalte den Standby des Computers für diese Zeit ab, wie, steht in der Anleitung für dein System. Nach dem Aufwachen läuft das Programm zwar weiter, im Standby aber steht es still.
 - Ein Eintrag „nicht gefunden“ bleibt gespeichert. Hatte MusicBrainz einen Titel beim ersten Mal nicht, wird er nicht neu gesucht.
+
+## Fortschritt und Live-Fenster
+
+Ein Schritt besteht aus mehreren Abschnitten, zum Beispiel bei Schritt 2: Ordner durchsuchen, Sammlung lesen, Metadaten suchen, Alben zuordnen, Album-Angaben laden, Prüfansicht, Metadaten schreiben. Der Balken zeigt immer den laufenden Abschnitt, mit Anzahl und Restzeit, und beginnt bei jedem Abschnitt wieder bei 0. Zwischen zwei Abschnitten und bei Arbeit, deren Menge vorher nicht feststeht, läuft ein Block hin und her. Die Zeile darunter sagt, was gerade passiert. Ist der Schritt fertig, ist der Balken leer und links steht „Ausgeführt am …“.
+
+**Live-Fenster:** Der Knopf unten öffnet ein Konsolenfenster. Darin erscheint mit Uhrzeit jede Datei, die gerade bearbeitet wird, zum Beispiel:
+
+```
+14:03:12  » Metadaten suchen: 4.210 von 28.000, Restzeit etwa 6 h 20 min
+14:03:12  Gefunden: C:\Musik\Prince\Kiss.mp3 → Prince - Kiss (MusicBrainz, 98 %)
+14:03:13  Nicht gefunden: C:\Musik\track01.mp3
+14:03:14  Pausiert, keine Verbindung zu musicbrainz.org seit 2 min
+```
+
+Du kannst es jederzeit öffnen und schließen, auch mitten im Lauf, das ändert am Lauf nichts. Unter Windows ist es ein PowerShell-Fenster, auf dem Mac das Terminal, unter Linux das Standard-Terminal. Alles steht auch in der Datei `live-protokoll.txt` im Datenordner. Wird sie größer als 20 MB, beginnt beim nächsten Start eine neue, die alte bleibt als `live-protokoll.txt.alt`.
 
 ## Berichte
 

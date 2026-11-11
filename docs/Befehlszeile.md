@@ -484,6 +484,7 @@ nohup music-renamer-cli tags ~/Musik --cover --songtexte > lauf.log 2>&1 &
 | `data/mp3org.sqlite` | Sammlung und gespeicherte Treffer |
 | `data/journal-*.jsonl` | Protokolle für `undo` |
 | `genre-regeln.json` | eigene Genre-Zuordnungen |
+| `live-protokoll.txt` | was das Fenster gerade tut, Datei für Datei, für das **Live-Fenster** |
 
 Die Berichte sind CSV-Dateien mit Semikolon und lassen sich direkt in Excel oder LibreOffice öffnen. Jeder Lauf überschreibt den Bericht des gleichen Schritts. Lösche den Ordner `data` nicht während oder zwischen Läufen, sonst muss die Suche von vorne beginnen und `undo` geht nicht mehr.
 

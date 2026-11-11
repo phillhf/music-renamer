@@ -179,7 +179,12 @@ def scan(root, db, exclude=None, progress=print):
              db.execute("SELECT path, size, mtime FROM files WHERE path LIKE ? ESCAPE '\\'",
                         (_prefix(root),))}
     seen, errors, read = set(), [], 0
-    paths = list(find_audio(root, exclude))
+    job.activity(t("Ordner durchsuchen"))
+    paths = []
+    for path in find_audio(root, exclude):
+        paths.append(path)
+        if len(paths) % 500 == 0:
+            job.activity(t("Ordner durchsuchen, {count} Audiodateien gefunden", count=len(paths)))
     for number, path in enumerate(paths, 1):
         job.step(number, len(paths), t("Sammlung lesen"))
         seen.add(path)
@@ -191,6 +196,7 @@ def scan(root, db, exclude=None, progress=print):
         if known.get(path) == (stat.st_size, stat.st_mtime):
             continue
         read += 1
+        job.detail(t("Lesen: {path}", path=path))
         if read % 500 == 0:
             db.commit()  # Ein Abbruch soll nur die letzten Dateien kosten
             progress(f"  {read} Dateien gelesen ...")

@@ -1,6 +1,7 @@
 """Menüführung: Schritte, Seiten und gespeicherter Status. Braucht eine Anzeige, unter Linux xvfb."""
 import os
 import sys
+import tempfile
 import time
 import tkinter as tk
 from tkinter import ttk
@@ -26,7 +27,9 @@ class Navigation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.saved = {}
-        cls.patchers = [mock.patch.object(gui, "load_settings", return_value={"ordner": "C:/Musik"}),
+        cls.data = tempfile.TemporaryDirectory()
+        cls.patchers = [mock.patch.object(cli, "APP_DIR", cls.data.name),
+                        mock.patch.object(gui, "load_settings", return_value={"ordner": "C:/Musik"}),
                         mock.patch.object(gui, "save_settings", side_effect=cls.saved.update)]
         for patcher in cls.patchers:
             patcher.start()
@@ -37,6 +40,7 @@ class Navigation(unittest.TestCase):
         cls.app.destroy()
         for patcher in cls.patchers:
             patcher.stop()
+        cls.data.cleanup()
 
     def setUp(self):
         self.saved.clear()
@@ -163,6 +167,36 @@ class Navigation(unittest.TestCase):
             window._write()
         self.assertEqual(save.call_args[0][1], {"house": "Rock"})
         self.assertEqual(sorted((t.path, g) for t, g in written), [("1.mp3", "Rock"), ("2.mp3", "Rock")])
+
+    def test_bar_keeps_moving_between_stages_and_live_log_follows(self):
+        self.app._show_progress(5, 10, "Metadaten suchen", 30)
+        self.assertEqual((str(self.app.progress.cget("mode")), self.app.progress["value"]), ("determinate", 50))
+        self.app._show_progress(10, 10, "Metadaten suchen", None)
+        self.assertEqual(str(self.app.progress.cget("mode")), "indeterminate")
+        self.assertIn("nächste Abschnitt", self.app.progress_text.get())
+        self.app._show_progress(0, 0, "Alben zuordnen", None)
+        self.assertEqual(self.app.progress_text.get(), "Alben zuordnen …")
+        self.app._show_progress(1, 4, "Album-Angaben laden", None)
+        self.assertEqual(str(self.app.progress.cget("mode")), "determinate")
+        gui.job.detail("Gefunden: a.mp3")
+        self.app._set_busy(False)
+        self.assertEqual(str(self.app.progress.cget("mode")), "determinate")
+        with open(self.app.live.path, encoding="utf-8") as f:
+            text = f.read()
+        for expected in ("Metadaten suchen: 5 von 10", "Alben zuordnen …", "Gefunden: a.mp3"):
+            self.assertIn(expected, text)
+
+    def test_live_window_command(self):
+        command = gui.system.live_view_command(r"C:\Daten\O'Brien\live.txt", "Live")
+        if gui.system.MACOS:
+            self.assertEqual(command[0], "osascript")
+        elif not gui.system.LINUX:
+            self.assertIn("-Wait", command[-1])
+            self.assertIn("O''Brien", command[-1])
+        with mock.patch.object(gui.system, "open_live_view", return_value=False), \
+                mock.patch.object(gui.messagebox, "showinfo") as info:
+            self.app._open_live()
+        self.assertIn("live-protokoll.txt", info.call_args[0][1])
 
     def test_advanced_options_open_and_close(self):
         toggle = next(w for w in self.all_widgets(self.app.pages["tags"])

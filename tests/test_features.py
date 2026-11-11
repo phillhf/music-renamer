@@ -690,6 +690,22 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class Progress(Base):
+    def test_every_stage_reports_and_files_show_up_in_detail(self):
+        for number in range(3):
+            make_mp3(self.path(f"{number}.mp3"), number, tags={"artist": "A", "title": str(number)})
+        reports, details = [], []
+        with mock.patch.object(job, "listener", lambda *values: reports.append(values)), \
+                mock.patch.object(job, "detail_listener", details.append), \
+                contextlib.redirect_stdout(io.StringIO()):
+            cli.cmd_rename(Namespace(ordner=self.root, muster="{artist}/{title}", apply=True))
+        stages = [text for done, total, text, left in reports]
+        for stage in ("Ordner durchsuchen", "Sammlung lesen", "Sammlung laden", "Neue Namen planen", "Dateien umbenennen"):
+            self.assertIn(stage, stages)
+        self.assertTrue(any(line.startswith("Lesen: ") for line in details))
+        self.assertTrue(any("→" in line for line in details))
+
+
 class GenreMerging(Base):
     def setUp(self):
         super().setUp()

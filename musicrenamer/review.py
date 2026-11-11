@@ -6,6 +6,8 @@ from . import system
 from .i18n import FIELD_LABELS, t
 
 MARK = {True: "☑", False: "☐"}
+FILL_CHUNK = 1000  # Zeilen je Durchgang, damit das Fenster bei 30.000 Zeilen bedienbar bleibt
+FILTER_DELAY = 300  # ms nach dem letzten Tastendruck
 
 
 class ReviewWindow(tk.Toplevel):
@@ -18,6 +20,7 @@ class ReviewWindow(tk.Toplevel):
         self.filter_text = tk.StringVar()
         self.status = tk.StringVar()
         self.cell = None
+        self.fill_id = self.filter_id = None
         self._build(duplicates)
         self._refresh()
         self.protocol("WM_DELETE_WINDOW", lambda: self._finish(None))
@@ -35,7 +38,7 @@ class ReviewWindow(tk.Toplevel):
         ttk.Entry(search, textvariable=self.filter_text).pack(side="left", fill="x", expand=True)
         ttk.Button(search, text=t("Alle"), command=lambda: self._check_all(True)).pack(side="left", padx=(6, 0))
         ttk.Button(search, text=t("Keine"), command=lambda: self._check_all(False)).pack(side="left", padx=(6, 0))
-        self.filter_text.trace_add("write", lambda *unused: self._refresh())
+        self.filter_text.trace_add("write", lambda *unused: self._refresh_later())
 
         table = ttk.Frame(main)
         table.grid(row=2, column=0, sticky="nsew")
@@ -59,6 +62,7 @@ class ReviewWindow(tk.Toplevel):
 
         bottom = ttk.Frame(main)
         bottom.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+        ttk.Label(main, textvariable=self.status).grid(row=4, column=0, sticky="w", pady=(4, 0))
         if duplicates:
             ttk.Button(bottom, text=t("Datei abspielen"), command=lambda: self._play("Datei")).pack(side="left")
             ttk.Button(bottom, text=t("Behaltene abspielen"), command=lambda: self._play("Behalten")).pack(
@@ -71,13 +75,31 @@ class ReviewWindow(tk.Toplevel):
     def _texts(self, index):
         return [str(self.rows[index].get(column, "")) for column in self.columns]
 
+    def _refresh_later(self):
+        if self.filter_id:
+            self.after_cancel(self.filter_id)
+        self.filter_id = self.after(FILTER_DELAY, self._refresh)
+
     def _refresh(self):
-        needle = self.filter_text.get().casefold()
+        self.filter_id = None
+        if self.fill_id:
+            self.after_cancel(self.fill_id)
         self.tree.delete(*self.tree.get_children())
-        for index in range(len(self.rows)):
+        self._fill(self.filter_text.get().casefold(), 0)
+
+    def _fill(self, needle, start):
+        """Füllt die Tabelle in Häppchen; dazwischen bleibt das Programm bedienbar."""
+        end = min(start + FILL_CHUNK, len(self.rows))
+        for index in range(start, end):
             texts = self._texts(index)
             if needle in " ".join(texts).casefold():
                 self.tree.insert("", "end", iid=str(index), values=(MARK[self.checked[index]], *texts))
+        if end < len(self.rows):
+            self.status.set(t("Zeilen werden geladen: {done} von {total}", done=end, total=len(self.rows)))
+            self.fill_id = self.after(1, self._fill, needle, end)
+        else:
+            self.fill_id = None
+            self.status.set("")
         self._update_count()
 
     def _update_count(self):
@@ -156,5 +178,9 @@ class ReviewWindow(tk.Toplevel):
         self._finish([row for index, row in enumerate(self.rows) if self.checked[index]])
 
     def _finish(self, rows):
+        for pending in (self.fill_id, self.filter_id):
+            if pending:
+                self.after_cancel(pending)
+        self.fill_id = self.filter_id = None
         self.destroy()
         self.on_done(rows)

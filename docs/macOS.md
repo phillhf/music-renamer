@@ -94,6 +94,7 @@ Alles liegt unter `~/Library/Application Support/Music Renamer`. Im Finder errei
 | `data` | Sammlung, gespeicherte Treffer, Änderungsprotokolle |
 | `einstellungen.json` | deine Einstellungen, auch ein eigener AcoustID-Key und das Discogs-Token im Klartext |
 | `genre-regeln.json` | eigene Genre-Zuordnungen |
+| `live-protokoll.txt` | was das Fenster gerade tut, Datei für Datei, für das **Live-Fenster** |
 
 ## Deinstallation
 

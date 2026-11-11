@@ -35,6 +35,7 @@ def _ensure_hashes(tracks, db, progress):
     todo = [t for group in by_size.values() if len(group) > 1 for t in group if not t.audio_hash]
     for n, track in enumerate(todo, 1):
         job.step(n, len(todo), t("Dateien gehasht"))
+        job.detail(t("Prüfsumme: {path}", path=track.path))
         track.audio_hash = hash_audio(track.path, track.audio_start, track.audio_size)
         db.execute("UPDATE files SET audio_hash = ? WHERE path = ?", (track.audio_hash, track.path))
     db.commit()
@@ -65,6 +66,7 @@ def _make_group(kind, tracks):
 
 def find_duplicates(tracks, db, progress=print, fpcalc=None):
     _ensure_hashes(tracks, db, progress)
+    job.activity(t("Dubletten vergleichen"))
     groups, remaining = [], {}
     by_hash = defaultdict(list)
     for track in tracks:

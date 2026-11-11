@@ -12,6 +12,7 @@ class Cancelled(BaseException):
 class Job:
     def __init__(self):
         self.listener = None
+        self.detail_listener = None  # bekommt jede Einzelmeldung, etwa für das Live-Fenster
         self._cancel = threading.Event()
         self._started = 0.0
         self._last_report = 0.0
@@ -39,6 +40,19 @@ class Job:
             left = (now - self._started) / done * (total - done) if done else None
             self.listener(done, total, text, left)
 
+    def activity(self, text):
+        """Meldet Arbeit, deren Menge nicht bekannt ist; die Oberfläche zeigt dann einen laufenden Balken."""
+        if self._cancel.is_set():
+            raise Cancelled()
+        self._phase, self._position = text, (0, 0)
+        if self.listener:
+            self.listener(0, 0, text, None)
+
+    def detail(self, text):
+        """Eine Zeile für das Live-Fenster, etwa welche Datei gerade dran ist."""
+        if self.detail_listener:
+            self.detail_listener(text)
+
     def wait(self, seconds):
         """Wartet; Abbrechen wirkt sofort und die Pause zählt nicht zur Restzeit."""
         if self._cancel.wait(seconds):
@@ -49,6 +63,7 @@ class Job:
         """Zeigt einen Hinweis in der Statuszeile, ohne den Stand zu ändern."""
         if self.listener:
             self.listener(*self._position, text, None)
+        self.detail(text)
 
 
 job = Job()

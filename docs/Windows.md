@@ -32,7 +32,7 @@ Eine vorhandene Installation erkennt das Setup und aktualisiert sie. Das gilt au
 Für Administratoren gibt es ein stilles Setup:
 
 ```powershell
-.\Music-Renamer-Setup-0.19.0.exe /VERYSILENT /DIR="D:\Music Renamer" /TASKS="desktopicon,cli"
+.\Music-Renamer-Setup-0.20.0.exe /VERYSILENT /DIR="D:\Music Renamer" /TASKS="desktopicon,cli"
 ```
 
 ## Erster Start
@@ -83,6 +83,7 @@ Alles liegt unter `%LOCALAPPDATA%\Music Renamer`, also meist `C:\Users\DEINNAME\
 | `data` | Sammlung, gespeicherte Treffer, Änderungsprotokolle |
 | `einstellungen.json` | deine Einstellungen, auch ein eigener AcoustID-Key und das Discogs-Token im Klartext |
 | `genre-regeln.json` | eigene Genre-Zuordnungen |
+| `live-protokoll.txt` | was das Fenster gerade tut, Datei für Datei, für das **Live-Fenster** |
 
 ## Deinstallation
 
@@ -136,7 +137,7 @@ setx DISCOGS_TOKEN "dein-token"
 | Problem | Lösung |
 |---|---|
 | SmartScreen lässt das Setup nicht starten | **Weitere Informationen**, dann **Trotzdem ausführen**. Wird das Blockieren von deiner Firma verwaltet, frage die IT |
-| Das Antivirenprogramm meldet das Setup | Unsignierte Programme werden manchmal fälschlich gemeldet. Die Prüfsumme steht in der `.sha256`-Datei auf der Release-Seite, prüfen kannst du sie mit `Get-FileHash .\Music-Renamer-Setup-0.19.0.exe` |
+| Das Antivirenprogramm meldet das Setup | Unsignierte Programme werden manchmal fälschlich gemeldet. Die Prüfsumme steht in der `.sha256`-Datei auf der Release-Seite, prüfen kannst du sie mit `Get-FileHash .\Music-Renamer-Setup-0.20.0.exe` |
 | Dateien lassen sich nicht ändern | Schließe Player, die die Musik gerade nutzen, und prüfe, ob die Dateien schreibgeschützt sind. Das Programm meldet solche Dateien im Protokoll und läuft weiter |
 | Pfad zu lang | Sehr tiefe Ordner können die Grenze von Windows überschreiten. Nutze ein kürzeres Muster oder einen kürzeren Sammlungsordner |
 | `music-renamer-cli` wird nicht erkannt | Öffne ein neues Terminal. Hilft das nicht, starte das Setup erneut und prüfe das Häkchen **Befehlszeile hinzufügen** |

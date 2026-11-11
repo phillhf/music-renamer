@@ -40,6 +40,30 @@ EN = {
     "Zusammenfassen": "Merge",
     "Dateien": "Files",
     "Nach dem Ausführen siehst du, welche Genres gefunden wurden, und kannst sie zusammenfassen, zum Beispiel Dubstep und House zu Electronic. Später geht das jederzeit über „Genres“ unten.": "After running you see which genres were found and can merge them, for example Dubstep and House into Electronic. Later you can do this any time with “Genres” below.",
+    "Alben zuordnen": "Matching albums",
+    "Zeilen werden geladen: {done} von {total}": "Loading rows: {done} of {total}",
+    "Prüfsumme: {path}": "Checksum: {path}",
+    "{stage} fertig, der nächste Abschnitt wird vorbereitet …": "{stage} done, preparing the next stage …",
+    "Sammlung laden": "Loading collection",
+    "Lesen: {path}": "Reading: {path}",
+    "Kein Terminal gefunden. Das Live-Protokoll steht in {path}.": "No terminal found. The live log is in {path}.",
+    "Läuft …": "Running …",
+    "Ordner durchsuchen": "Searching folders",
+    "Dubletten vergleichen": "Comparing duplicates",
+    "Verschieben: {path}": "Moving: {path}",
+    "Album-Angaben: {id}": "Album details: {id}",
+    "Schreiben: {path}": "Writing: {path}",
+    "Prüfansicht offen, wartet auf deine Auswahl": "Review window open, waiting for your choice",
+    "Gefunden: {path} → {artist} - {title} ({source}, {score} %)": "Found: {path} → {artist} - {title} ({source}, {score} %)",
+    "Nicht gefunden: {path}": "Not found: {path}",
+    "Live-Fenster": "Live window",
+    "Neue Namen planen": "Planning new names",
+    "Zielordner prüfen": "Checking target folder",
+    "Fingerabdrücke vergleichen": "Comparing fingerprints",
+    "Ordner durchsuchen, {count} Audiodateien gefunden": "Searching folders, {count} audio files found",
+    "Schon vollständig: {path}": "Already complete: {path}",
+    "Klang analysieren: {path}": "Analysing sound: {path}",
+    "Änderungen zusammenstellen": "Collecting changes",
     "Ein Zeitraum umfasst": "A period spans",
     "Jahre, zum Beispiel 1980 - 1984": "years, for example 1980 - 1984",
     "Platzhalter: {fields}": "Placeholders: {fields}",
@@ -224,6 +248,8 @@ def t(text, **values):
 
 
 def progress_line(done, total, text, left):
+    if not total:
+        return f"{text} …"
     status = f"{text}: {t('{done} von {total}', done=done, total=total)}"
     if left is not None and left >= 1:
         status += f", {t('Restzeit etwa {time}', time=format_duration(left))}"

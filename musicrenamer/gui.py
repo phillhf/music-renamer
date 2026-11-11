@@ -6,6 +6,7 @@ import os
 import queue
 import sys
 import threading
+import time
 import tkinter as tk
 import webbrowser
 from argparse import Namespace
@@ -14,7 +15,7 @@ from types import SimpleNamespace
 
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
-from . import __version__, cli, i18n, journal, system, updater
+from . import __version__, cli, i18n, journal, livelog, system, updater
 from .editor import TagEditor
 from .genre_window import GenreWindow
 from .i18n import progress_line, t
@@ -28,6 +29,7 @@ QUICK = "schnell"
 NAME_PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist} - {album} - {track} - {title}", "{title}")
 FOLDER_DEPTH = 4
 NO_FOLDER = "–"
+LIVE_PROGRESS_GAP = 10  # Sekunden zwischen zwei Standmeldungen im Live-Fenster
 
 
 def saved_levels(settings):
@@ -51,12 +53,14 @@ LEVEL_LABELS = {level_label(level): level for level in LEVELS}
 
 
 class QueueWriter:
-    def __init__(self, target):
-        self.target = target
+    def __init__(self, target, live=None):
+        self.target, self.live = target, live
 
     def write(self, text):
         if text.strip():
             self.target.put(("log", text.rstrip()))
+            if self.live:
+                self.live.write(text.rstrip())
 
     def flush(self):
         pass
@@ -150,6 +154,10 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.folder.trace_add("write", self._refresh_nav)
         self._enable_drop()
         job.listener = lambda *values: self.events.put(("progress", values))
+        self.live = livelog.LiveLog(cli.APP_DIR)
+        self.live.rotate()
+        job.detail_listener = self.live.write
+        self.live_phase, self.live_written, self.live_line = None, 0.0, ""
         self.drain_id = self.after(100, self._drain_events)
         if auto_update_check:
             self._run_background(self._check_update, quiet=True)
@@ -220,6 +228,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         ttk.Button(bottom, text=t("Berichte öffnen"), command=self._open_reports).pack(side="left", padx=6)
         self._button(bottom, t("Tag-Editor"), self._open_editor).pack(side="left")
         self._button(bottom, t("Genres"), self._open_genres).pack(side="left", padx=6)
+        ttk.Button(bottom, text=t("Live-Fenster"), command=self._open_live).pack(side="left", padx=(0, 6))
         self._button(bottom, t("Neu anfangen"), self._forget).pack(side="left", padx=(0, 6))
         ttk.Button(bottom, text=t("Hilfe"), command=lambda: webbrowser.open(cli.DOCS_URL + "Bedienung.md")).pack(
             side="left", padx=(0, 6))
@@ -468,6 +477,16 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         os.makedirs(cli.REPORT_DIR, exist_ok=True)
         system.open_path(cli.REPORT_DIR)
 
+    def _open_live(self):
+        """Konsolenfenster, in dem jede bearbeitete Datei erscheint."""
+        path = self.live.ensure()
+        try:
+            opened = system.open_live_view(path, "Music Renamer – Live")
+        except OSError:
+            opened = False
+        if not opened:
+            messagebox.showinfo("Music Renamer", t("Kein Terminal gefunden. Das Live-Protokoll steht in {path}.", path=path))
+
     def _open_genres(self):
         folder = self.folder.get().strip()
         if not folder:
@@ -492,19 +511,40 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.log.configure(state="disabled")
 
     def _show_progress(self, done, total, text, left):
-        self.progress["value"] = done * 100 / total if total else 0
-        self.progress_text.set(progress_line(done, total, text, left))
+        # Ohne bekannte Menge oder zwischen zwei Abschnitten läuft der Balken, statt auf 100 % stehen zu bleiben
+        waiting = not total or done >= total
+        if waiting:
+            if str(self.progress.cget("mode")) != "indeterminate":
+                self.progress.configure(mode="indeterminate")
+                self.progress.start(15)
+            line = progress_line(done, total, text, None) if not total else \
+                t("{stage} fertig, der nächste Abschnitt wird vorbereitet …", stage=text)
+        else:
+            if str(self.progress.cget("mode")) != "determinate":
+                self.progress.stop()
+                self.progress.configure(mode="determinate")
+            self.progress["value"] = done * 100 / total
+            line = progress_line(done, total, text, left)
+        self.progress_text.set(line)
+        now = time.monotonic()
+        if text != self.live_phase or now - self.live_written >= LIVE_PROGRESS_GAP or waiting:
+            if text != self.live_phase or line != self.live_line:
+                self.live.write(f"» {line}")
+            self.live_phase, self.live_written, self.live_line = text, now, line
         if self.running_step:
             number = STEPS.index(self.running_step) + 1
-            self.nav_texts[self.running_step].set(
-                f"{number}. {t(STEP_NAMES[self.running_step])}\n     {t('Läuft: {percent} %', percent=round(self.progress['value']))}")
+            state = t("Läuft …") if waiting else t("Läuft: {percent} %", percent=round(self.progress["value"]))
+            self.nav_texts[self.running_step].set(f"{number}. {t(STEP_NAMES[self.running_step])}\n     {state}")
 
     def _set_busy(self, busy):
         for button in self.buttons:
             button.configure(state="disabled" if busy else "normal")
         self.cancel_button.configure(state="normal" if busy else "disabled")
         if not busy:
+            self.progress.stop()
+            self.progress.configure(mode="determinate")
             self.progress["value"] = 0
+            self.live_phase = None
             self.progress_text.set("")
             self.running_step = None
             self._refresh_nav()
@@ -538,13 +578,15 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
 
     def destroy(self):
         self.after_cancel(self.drain_id)
+        job.detail_listener = None
+        self.live.close()
         super().destroy()
 
     def _run_background(self, work, *args, on_success=None, **kwargs):
         def runner():
             job.reset()
             self.events.put(("busy", True))
-            with contextlib.redirect_stdout(QueueWriter(self.events)):
+            with contextlib.redirect_stdout(QueueWriter(self.events, self.live)):
                 try:
                     work(*args, **kwargs)
                     if on_success and not self.review_cancelled:
@@ -597,6 +639,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         os.environ["DISCOGS_TOKEN"] = settings["discogs_token"]
         # Nur ein ausgeführter Schritt zählt als erledigt, eine Vorschau nicht
         self.running_step, self.review_cancelled = step, False
+        self.live.write("")
+        self.live.write(f"===== {t(STEP_NAMES[step])}: {t('Ausführen') if apply else t('Vorschau')} – {folder} =====")
         self._run_background(command, Namespace(ordner=folder, apply=apply, review=self._ask_review, **options),
                              on_success=(lambda: self._finished(step, folder, then)) if apply else None)
 

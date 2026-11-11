@@ -44,21 +44,21 @@ Lade die passende Datei von der [Release-Seite](https://github.com/phillhf/music
 Fenster-Version:
 
 ```bash
-wget https://github.com/phillhf/music-renamer/releases/download/v0.19.0/music-renamer_0.19.0_amd64.deb
+wget https://github.com/phillhf/music-renamer/releases/download/v0.20.0/music-renamer_0.20.0_amd64.deb
 ```
 
 ```bash
-sudo apt install ./music-renamer_0.19.0_amd64.deb
+sudo apt install ./music-renamer_0.20.0_amd64.deb
 ```
 
 Befehlszeile:
 
 ```bash
-wget https://github.com/phillhf/music-renamer/releases/download/v0.19.0/music-renamer-cli_0.19.0_amd64.deb
+wget https://github.com/phillhf/music-renamer/releases/download/v0.20.0/music-renamer-cli_0.20.0_amd64.deb
 ```
 
 ```bash
-sudo apt install ./music-renamer-cli_0.19.0_amd64.deb
+sudo apt install ./music-renamer-cli_0.20.0_amd64.deb
 ```
 
 **Wichtig:** Das `./` vor dem Dateinamen muss sein, sonst sucht `apt` im Internet nach dem Paket. Nutze `apt`, nicht `dpkg -i`, denn nur `apt` installiert die nötigen Abhängigkeiten mit.
@@ -70,7 +70,7 @@ Die Klangerkennung `fpcalc` ist in den `amd64`-Paketen enthalten. Für `arm64` i
 Zur Kontrolle kannst du die Prüfsumme vergleichen. Lade dafür auch die Datei `.deb.sha256` und starte im selben Ordner:
 
 ```bash
-sha256sum -c music-renamer_0.19.0_amd64.deb.sha256
+sha256sum -c music-renamer_0.20.0_amd64.deb.sha256
 ```
 
 ## Erster Start mit Fenster
@@ -138,6 +138,7 @@ Alles liegt unter `~/.local/share/Music Renamer`, oder unter `$XDG_DATA_HOME/Mus
 | `data` | Sammlung, gespeicherte Treffer, Änderungsprotokolle |
 | `einstellungen.json` | Einstellungen der Fenster-Version, auch ein eigener AcoustID-Key und das Discogs-Token im Klartext |
 | `genre-regeln.json` | eigene Genre-Zuordnungen |
+| `live-protokoll.txt` | was das Fenster gerade tut, Datei für Datei, für das **Live-Fenster** |
 
 Die Daten gehören dem jeweiligen Benutzer. Starte das Programm also nicht mit `sudo`, sonst liegen Treffer und Verlauf bei `root`. Lässt du den Lauf auf einem Server als eigener Benutzer laufen, braucht dieser Schreibrechte auf die Musik.
 

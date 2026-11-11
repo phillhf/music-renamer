@@ -56,6 +56,7 @@ def _load(tracks, db, fpcalc):
         if row:
             values = json.loads(row[0])
         else:
+            job.detail(t("Klang analysieren: {path}", path=track.path))
             values = raw_fingerprint(track.path, fpcalc)
             db.execute("INSERT OR REPLACE INTO lookups VALUES (?, ?)", (key, json.dumps(values)))
             db.commit()
@@ -88,7 +89,10 @@ def find_groups(tracks, db, fpcalc, progress=print):
             path = parent[path]
         return path
 
-    for a, b in _candidates(prints):
+    job.activity(t("Fingerabdrücke vergleichen"))
+    pairs = _candidates(prints)
+    for number, (a, b) in enumerate(pairs, 1):
+        job.step(number, len(pairs), t("Fingerabdrücke vergleichen"))
         gap = abs((by_path[a].duration or 0) - (by_path[b].duration or 0))
         if gap <= MAX_DURATION_GAP and root(a) != root(b) \
                 and similarity(prints[a], prints[b]) >= MIN_SIMILARITY:
