@@ -7,7 +7,7 @@ import sys
 import time
 from collections import Counter
 
-from . import __version__, genres, system, updater
+from . import __version__, convert, genres, system, updater
 from . import journal as journaling
 from . import library
 from .albums import align_albums
@@ -612,6 +612,41 @@ def cmd_genres(args):
     write_genres(changes)
 
 
+def cmd_convert(args):
+    """Wandelt Audiodateien nach MP3 um; unabhängig von den drei Schritten."""
+    ffmpeg, ffprobe = convert.tools()
+    job.activity(t("Ordner durchsuchen"))
+    candidates = convert.find_candidates(args.dateien)
+    if not candidates:
+        print(t("Keine Dateien zum Umwandeln gefunden. MP3-Dateien bleiben, wie sie sind."))
+        return
+    ready, rows = convert.check(candidates, ffprobe)
+    columns = ("Datei", "Format", "Sekunden", "Prüfung", "Hinweis")
+    report = write_report("umwandeln.csv", columns, [[r[c] for c in columns] for r in rows])
+    videos = sum(1 for r in rows if r["Prüfung"] == t("Video, bleibt liegen"))
+    print(t("Geprüft: {total} Dateien. Umwandeln: {ready}. Videos, die liegen bleiben: {videos}. Aus anderen Gründen liegen: {other}.",
+            total=len(rows), ready=len(ready), videos=videos, other=len(rows) - len(ready) - videos))
+    print(t("Bericht: {path}", path=report))
+    if not args.apply:
+        print(t("Vorschau: nichts geändert."))
+        return
+    paths = {path for path, _ in ready}
+    chosen = review(args, t("Nach MP3 umwandeln"), ("Datei", "Format", "Sekunden"), (),
+                    [r for r in rows if r["Datei"] in paths])
+    if not chosen:
+        print(t("Keine Änderungen nötig."))
+        return
+    chosen = {r["Datei"] for r in chosen}
+    folders = [p for p in args.dateien if os.path.isdir(p)]
+    root = os.path.abspath(folders[0]) if len(folders) == 1 else None
+    journal = journaling.Journal(DATA_DIR, "umwandeln")
+    try:
+        convert.convert_all([item for item in ready if item[0] in chosen], ffmpeg, ffprobe,
+                            getattr(args, "qualitaet", "v0"), getattr(args, "originale_behalten", False), root, journal)
+    finally:
+        journal.close()
+
+
 def forget_results(db):
     """Löscht Suchergebnisse, Fingerabdrücke und den gelesenen Stand der Sammlung; der Verlauf bleibt."""
     count = db.execute("SELECT count(*) FROM lookups").fetchone()[0]
@@ -697,6 +732,15 @@ def main():
     genre = command("genres", cmd_genres, "Genres der Sammlung auflisten und zusammenfassen")
     genre.add_argument("--zusammenfassen", action="append", metavar='"A, B=ZIEL"',
                        help='macht aus den Genres A und B das Genre ZIEL, mehrfach möglich')
+    converter = commands.add_parser("umwandeln", help="Audiodateien nach MP3 umwandeln, Videos bleiben liegen",
+                                    formatter_class=keep_lines, epilog=f"Beispiele: {DOCS_URL}Befehlszeile.md#umwandeln")
+    converter.add_argument("dateien", nargs="+", help="Ordner oder einzelne Dateien")
+    converter.add_argument("--apply", action="store_true", help="wirklich umwandeln")
+    converter.add_argument("--qualitaet", choices=list(convert.QUALITIES), default="v0",
+                           help="v0 (Standard, beste variable Bitrate), 320, 256 oder 192 kbit/s")
+    converter.add_argument("--originale-behalten", action="store_true",
+                           help=f'Originale liegen lassen statt nach "{convert.ORIGINALS}" verschieben')
+    converter.set_defaults(handler=cmd_convert)
     undo = commands.add_parser("undo", help="letzten ausgeführten Schritt zurücknehmen", formatter_class=keep_lines,
                                epilog=f"Mehr dazu: {DOCS_URL}Befehlszeile.md#undo")
     undo.set_defaults(handler=cmd_undo)

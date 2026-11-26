@@ -31,7 +31,7 @@ Von der Installation bis zur Deinstallation. Wie die drei Arbeitsschritte im Pro
 3. Ziehe **Music Renamer** im geöffneten Fenster auf den Ordner **Applications**.
 4. Wirf das Image im Finder aus.
 
-Die Klangerkennung `fpcalc` ist bereits enthalten.
+Die Klangerkennung `fpcalc` und ffmpeg für **Nach MP3 umwandeln** sind bereits enthalten.
 
 ## Erster Start
 
@@ -149,6 +149,12 @@ Alle Befehle stehen in der [Befehlsreferenz](Befehlszeile.md). Für die Klangerk
 
 ```bash
 brew install chromaprint
+```
+
+Für `umwandeln` braucht die Befehlszeile aus dem Quellcode außerdem ffmpeg:
+
+```bash
+brew install ffmpeg
 ```
 
 ## Wenn etwas nicht klappt

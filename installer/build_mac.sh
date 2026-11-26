@@ -15,6 +15,13 @@ if [ -f tools/fpcalc ]; then
 else
     echo "tools/fpcalc fehlt, Build ohne Klangerkennung" >&2
 fi
+# ffmpeg und ffprobe für „Nach MP3 umwandeln“
+if [ -f tools/ffmpeg ] && [ -f tools/ffprobe ]; then
+    extra+=(--add-binary "$PWD/tools/ffmpeg:." --add-binary "$PWD/tools/ffprobe:.")
+    [ ! -f tools/ffmpeg-LICENSE.txt ] || extra+=(--add-data "$PWD/tools/ffmpeg-LICENSE.txt:.")
+else
+    echo "tools/ffmpeg fehlt, Build ohne Umwandeln" >&2
+fi
 
 # Die mitgelieferte Bash 3.2 lehnt ein leeres "${extra[@]}" unter set -u ab
 python -m PyInstaller --noconfirm --windowed --name "Music Renamer" \

@@ -81,6 +81,23 @@ def read_tags(audio):
     return values
 
 
+def read_cover(audio):
+    """Das Cover einer mit open_audio geöffneten Datei als Bytes, sonst None."""
+    tags = audio.tags if audio.tags is not None else {}
+    if isinstance(audio, MP3):
+        pictures = tags.getall("APIC") if tags else []
+        return bytes(pictures[0].data) if pictures else None
+    if isinstance(audio, MP4):
+        covers = tags.get("covr")
+        return bytes(covers[0]) if covers else None
+    if isinstance(audio, ASF):
+        return None  # eigenes Binärformat, siehe _write_asf
+    if getattr(audio, "pictures", None):
+        return audio.pictures[0].data
+    encoded = tags.get("metadata_block_picture") if tags else None
+    return Picture(base64.b64decode(encoded[0])).data if encoded else None
+
+
 def _image_type(data):
     return "image/png" if data[:4] == b"\x89PNG" else "image/jpeg"
 

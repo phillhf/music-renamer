@@ -73,7 +73,8 @@ Categories=AudioVideo;Audio;
 StartupWMClass=Music-renamer
 EOF
 
+# ffmpeg kommt unter Linux vom System; apt installiert empfohlene Pakete von selbst mit
 package music-renamer "ca-certificates, xdg-utils, fonts-dejavu-core" \
-    "${recommends:+$recommends, }pkexec | policykit-1" "Musiksammlung aufraeumen"
-package music-renamer-cli "ca-certificates" "$recommends" "Musiksammlung aufraeumen, Befehlszeile"
+    "${recommends:+$recommends, }ffmpeg, pkexec | policykit-1" "Musiksammlung aufraeumen"
+package music-renamer-cli "ca-certificates" "${recommends:+$recommends, }ffmpeg" "Musiksammlung aufraeumen, Befehlszeile"
 ls -lh dist/*.deb

@@ -45,6 +45,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - name: ffmpeg holen
+        shell: pwsh
+        run: |
+          gh release download b6.1.1 --repo eugeneware/ffmpeg-static --pattern "ffmpeg-win32-x64" --output tools\ffmpeg.exe
+          gh release download b6.1.1 --repo eugeneware/ffmpeg-static --pattern "ffprobe-win32-x64" --output tools\ffprobe.exe
+          gh release download b6.1.1 --repo eugeneware/ffmpeg-static --pattern "win32-x64.LICENSE" --output tools\ffmpeg-LICENSE.txt
+          # Ohne MP3-Encoder wäre das Werkzeug nutzlos
+          if (-not (& tools\ffmpeg.exe -hide_banner -encoders | Select-String libmp3lame)) { throw "ffmpeg ohne libmp3lame" }
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Inno Setup bereitstellen
         shell: pwsh
         run: if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
@@ -79,6 +90,15 @@ jobs:
           if (-not (OnPath)) { throw "Befehlszeile fehlt im Pfad" }
           & "$cli\music-renamer-cli.exe" --selftest
           if ($LASTEXITCODE -ne 0) { throw "Installierte Befehlszeile fehlgeschlagen" }
+          # Die Befehlszeile nutzt das ffmpeg des Fenster-Programms: echte Umwandlung, ein Video bleibt liegen
+          $music = Join-Path $env:RUNNER_TEMP "umwandeln"
+          New-Item -ItemType Directory -Force $music | Out-Null
+          & "$folder\_internal\ffmpeg.exe" -v error -y -f lavfi -i "sine=duration=3" "$music\ton.flac"
+          & "$folder\_internal\ffmpeg.exe" -v error -y -f lavfi -i "sine=duration=3" -f lavfi -i "testsrc=duration=3" -shortest "$music\film.mp4"
+          & "$cli\music-renamer-cli.exe" umwandeln $music --apply
+          if ($LASTEXITCODE -ne 0) { throw "Umwandeln fehlgeschlagen" }
+          if (-not (Test-Path "$music\ton.mp3")) { throw "ton.mp3 fehlt" }
+          if (Test-Path "$music\film.mp3") { throw "Das Video wurde umgewandelt" }
           # So ruft die Update-Funktion das Setup auf, die Auswahl muss bleiben
           Install @()
           if (-not (Test-Path "$cli\music-renamer-cli.exe") -or -not (OnPath)) { throw "Update hat die Befehlszeile entfernt" }
@@ -137,6 +157,17 @@ jobs:
           tar xzf fpcalc.tar.gz -C fpcalc
           find fpcalc -name fpcalc -type f -exec cp {} tools/ \;
           chmod +x tools/fpcalc
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: ffmpeg holen
+        run: |
+          platform=$([ "$(uname -m)" = arm64 ] && echo darwin-arm64 || echo darwin-x64)
+          gh release download b6.1.1 --repo eugeneware/ffmpeg-static --pattern "ffmpeg-$platform" --output tools/ffmpeg
+          gh release download b6.1.1 --repo eugeneware/ffmpeg-static --pattern "ffprobe-$platform" --output tools/ffprobe
+          gh release download b6.1.1 --repo eugeneware/ffmpeg-static --pattern "$platform.LICENSE" --output tools/ffmpeg-LICENSE.txt
+          chmod +x tools/ffmpeg tools/ffprobe
+          tools/ffmpeg -hide_banner -encoders | grep -q libmp3lame
         env:
           GH_TOKEN: ${{ github.token }}
 

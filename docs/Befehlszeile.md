@@ -11,6 +11,7 @@ Alle Befehle und Optionen von Music Renamer an einem Ort. Die Bedienung mit Fens
 - [tags](#tags)
 - [genres](#genres)
 - [umbenennen](#umbenennen)
+- [umwandeln](#umwandeln)
 - [undo](#undo)
 - [vergessen](#vergessen)
 - [update](#update)
@@ -60,13 +61,14 @@ music-renamer-cli tags "/mnt/nas/Meine Musik"
 | `tags ORDNER` | sucht Metadaten und schreibt sie mit `--apply` |
 | `genres ORDNER` | listet alle Genres und fasst sie mit `--zusammenfassen` und `--apply` zusammen |
 | `umbenennen ORDNER` | benennt und sortiert Dateien mit `--apply` |
+| `umwandeln ORDNER oder DATEIEN` | wandelt Audiodateien mit `--apply` nach MP3 um, Videos bleiben liegen |
 | `undo` | nimmt den letzten ausgeführten Schritt zurück |
 | `vergessen` | löscht gespeicherte Suchergebnisse, um von vorn zu beginnen |
 | `update` | prüft, ob es eine neue Version gibt |
 
 | Option | Befehl | Wirkung |
 |---|---|---|
-| `--apply` | `dubletten`, `tags`, `genres`, `umbenennen` | führt die Änderungen wirklich aus |
+| `--apply` | `dubletten`, `tags`, `genres`, `umbenennen`, `umwandeln` | führt die Änderungen wirklich aus |
 | `--ziel ORDNER` | `dubletten` | anderer Zielordner statt `<Sammlung>/Dubletten` |
 | `--klang` | `dubletten` | vergleicht am Klang, langsam |
 | `--aehnlich` | `dubletten` | verschiebt auch ähnliche Treffer |
@@ -80,6 +82,8 @@ music-renamer-cli tags "/mnt/nas/Meine Musik"
 | `--muster MUSTER` | `umbenennen` | Aufbau von Dateiname und Ordnern |
 | `--ziel ORDNER` | `umbenennen` | verschiebt alle benennbaren Dateien in diesen Ordner |
 | `--zeitraum N` | `umbenennen` | Jahre je `{zeitraum}`, Standard 5 |
+| `--qualitaet WERT` | `umwandeln` | `v0` (Standard), `320`, `256` oder `192` |
+| `--originale-behalten` | `umwandeln` | lässt die Originale liegen, statt sie zu verschieben |
 | `-h`, `--help` | alle | zeigt die Hilfe |
 
 ## dubletten
@@ -335,6 +339,50 @@ Mit `--ziel` wird verschoben, nicht kopiert. Auf ein anderes Laufwerk dauert das
 
 Bericht: `umbenennen-vorschau.csv`.
 
+## umwandeln
+
+Wandelt Audiodateien nach MP3 um. Vorher prüft ffprobe jede Datei: Hat sie ein bewegtes Bild, ist sie ein Video und bleibt liegen. Ein eingebettetes Cover zählt nicht als Video. Der Befehl hängt nicht an einer Sammlung.
+
+```bash
+music-renamer-cli umwandeln ORDNER oder DATEIEN [--apply] [--qualitaet v0|320|256|192] [--originale-behalten]
+```
+
+| Option | Wirkung |
+|---|---|
+| `--apply` | wandelt wirklich um. Ohne sie wird nur geprüft und der Bericht `umwandeln.csv` geschrieben |
+| `--qualitaet WERT` | `v0` ist die beste variable Bitrate und Standard, `320`, `256` und `192` sind feste Bitraten |
+| `--originale-behalten` | lässt die Originale liegen. Ohne diese Option wandern sie nach `Originale vor dem Umwandeln` im angegebenen Ordner |
+
+Die MP3 entsteht neben dem Original mit gleichem Namen. Tags und Cover werden übernommen, jede MP3 wird nach dem Umwandeln auf ihre Länge geprüft. MP3-Dateien und Dateien, neben denen schon eine gleichnamige MP3 liegt, bleiben unberührt. `undo` holt die Originale zurück und entfernt die MP3.
+
+**Beispiele**
+
+Erst prüfen, was umgewandelt würde:
+
+```bash
+music-renamer-cli umwandeln ~/Musik
+```
+
+Ausgabe:
+
+```
+Geprüft: 312 Dateien. Umwandeln: 298. Videos, die liegen bleiben: 9. Aus anderen Gründen liegen: 5.
+```
+
+Umwandeln mit 320 kbit/s, Originale bleiben liegen:
+
+```bash
+music-renamer-cli umwandeln ~/Musik --qualitaet 320 --originale-behalten --apply
+```
+
+Nur einzelne Dateien:
+
+```bash
+music-renamer-cli umwandeln ~/Downloads/live.flac ~/Downloads/interview.m4a --apply
+```
+
+Unter Windows und macOS ist ffmpeg im Programm enthalten. Unter Linux installiert `apt` es mit dem Paket mit, sonst `sudo apt install ffmpeg`.
+
 ## undo
 
 Nimmt den **letzten** ausgeführten Schritt zurück, ohne Rückfrage. Verschobene Dateien gehen an ihren alten Platz, Tags bekommen ihren alten Wert, eingebettete Cover und Songtexte werden entfernt.
@@ -479,6 +527,7 @@ nohup music-renamer-cli tags ~/Musik --cover --songtexte > lauf.log 2>&1 &
 | `berichte/tags-vorschau.csv` | geplante Metadaten mit Quelle und Trefferwert |
 | `berichte/nicht-gefunden.csv` | Dateien ohne sicheren Treffer |
 | `berichte/genres.csv` | alle Genres mit Anzahl und neuem Genre |
+| `berichte/umwandeln.csv` | jede geprüfte Datei mit Format, Länge und Ergebnis der Prüfung |
 | `berichte/umbenennen-vorschau.csv` | alte und neue Namen |
 | `berichte/defekte-dateien.csv` | Dateien, die sich nicht lesen ließen |
 | `data/mp3org.sqlite` | Sammlung und gespeicherte Treffer |

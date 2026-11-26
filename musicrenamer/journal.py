@@ -83,6 +83,16 @@ def undo_run(path):
                     os.makedirs(os.path.dirname(entry["source"]), exist_ok=True)
                     shutil.move(entry["target"], entry["source"])
                     done += 1
+            elif entry["action"] == "convert":
+                # Original zurück an seinen Platz, die erzeugte MP3 entfernen
+                if entry.get("backup") and os.path.exists(entry["backup"]):
+                    if os.path.exists(entry["source"]):
+                        raise FileExistsError(f"Ziel belegt: {entry['source']}")
+                    os.makedirs(os.path.dirname(entry["source"]), exist_ok=True)
+                    shutil.move(entry["backup"], entry["source"])
+                if os.path.exists(entry["created"]) and os.path.exists(entry["source"]):
+                    os.remove(entry["created"])
+                done += 1
             elif entry["action"] == "tag":
                 write_tags(entry["path"], entry["old"])
                 done += 1

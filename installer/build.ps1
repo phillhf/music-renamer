@@ -45,10 +45,17 @@ VSVersionInfo(
 $extra = @()
 if (Test-Path "tools\fpcalc.exe") { $extra = @("--add-binary", "$root\tools\fpcalc.exe;.") }
 else { Write-Warning "tools\fpcalc.exe fehlt, Build ohne Klangerkennung" }
+# ffmpeg und ffprobe für „Nach MP3 umwandeln“; ohne sie fehlt nur dieses Werkzeug
+if ((Test-Path "tools\ffmpeg.exe") -and (Test-Path "tools\ffprobe.exe")) {
+    # Nur ins Fenster-Programm; die Befehlszeile im Unterordner cli nutzt dieselben Dateien mit
+    $ffmpeg = @("--add-binary", "$root\tools\ffmpeg.exe;.", "--add-binary", "$root\tools\ffprobe.exe;.")
+    if (Test-Path "tools\ffmpeg-LICENSE.txt") { $ffmpeg += @("--add-data", "$root\tools\ffmpeg-LICENSE.txt;.") }
+}
+else { $ffmpeg = @(); Write-Warning "tools\ffmpeg.exe oder ffprobe.exe fehlt, Build ohne Umwandeln" }
 
 & $python -m PyInstaller --noconfirm --windowed --name MusicRenamer `
     --icon "$root\installer\app.ico" --add-data "$root\installer\app.ico;." --collect-all tkinterdnd2 --version-file "$root\build\version_info.txt" `
-    @extra --distpath dist --workpath build\pyinstaller --specpath build app.py
+    @extra @ffmpeg --distpath dist --workpath build\pyinstaller --specpath build app.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller fehlgeschlagen" }
 
 & $python -m PyInstaller --noconfirm --console --name music-renamer-cli `

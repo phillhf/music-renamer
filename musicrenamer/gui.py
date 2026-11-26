@@ -15,7 +15,7 @@ from types import SimpleNamespace
 
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
-from . import __version__, cli, i18n, journal, livelog, system, updater
+from . import __version__, cli, convert, i18n, journal, livelog, system, updater
 from .editor import TagEditor
 from .genre_window import GenreWindow
 from .i18n import progress_line, t
@@ -26,6 +26,9 @@ from .review import ReviewWindow
 SETTINGS_PATH = os.path.join(cli.APP_DIR, "einstellungen.json")
 STEPS = ("dubletten", "tags", "umbenennen")
 QUICK = "schnell"
+CONVERT = "umwandeln"
+QUALITY_LABELS = {"Beste Qualität, variable Bitrate (V0, etwa 245 kbit/s)": "v0", "320 kbit/s": "320",
+                  "256 kbit/s": "256", "192 kbit/s, kleinere Dateien": "192"}
 NAME_PATTERNS = ("{artist} - {title}", "{track} - {title}", "{artist} - {album} - {track} - {title}", "{title}")
 FOLDER_DEPTH = 4
 NO_FOLDER = "–"
@@ -149,6 +152,11 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.file_name = tk.StringVar(value=settings.get("dateiname", old[-1]))
         self.levels = [tk.StringVar(value=self._level_label(pattern)) for pattern in saved_levels(settings)]
         self.target_folder = tk.StringVar(value=settings.get("zielordner", ""))
+        self.convert_folder = tk.StringVar(value=settings.get("umwandeln_ordner", ""))
+        saved_quality = next((k for k, v in QUALITY_LABELS.items() if v == settings.get("umwandeln_qualitaet")),
+                             next(iter(QUALITY_LABELS)))
+        self.convert_quality = tk.StringVar(value=t(saved_quality))
+        self.keep_originals = tk.BooleanVar(value=settings.get("originale_behalten", False))
         self.period_years = tk.StringVar(value=str(settings.get("zeitraum_jahre", cli.PERIOD_YEARS)))
         self.language = tk.StringVar(value=next(k for k, v in i18n.LANGUAGES.items() if v == i18n.language))
         self.progress_text = tk.StringVar()
@@ -198,8 +206,8 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self.content.grid(row=0, column=2, sticky="nsew")
         self.content.columnconfigure(0, weight=1)
         self.page = tk.StringVar(value=STEPS[0])
-        self.nav_texts = {key: tk.StringVar() for key in (*STEPS, QUICK)}
-        for key in (*STEPS, QUICK):
+        self.nav_texts = {key: tk.StringVar() for key in (*STEPS, QUICK, CONVERT)}
+        for key in (*STEPS, QUICK, CONVERT):
             if key == QUICK:
                 ttk.Separator(nav).pack(fill="x", pady=8)
             ttk.Radiobutton(nav, textvariable=self.nav_texts[key], variable=self.page, value=key,
@@ -209,6 +217,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
         self._build_tags()
         self._build_rename()
         self._build_quick()
+        self._build_convert()
         self._refresh_nav()
         self._show_page()
 
@@ -372,6 +381,44 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                                    padding=50)
         self.drop_zone.pack(fill="x", pady=(6, 0))
 
+    def _build_convert(self):
+        page = self._page(CONVERT, t("Nach MP3 umwandeln"),
+                          t("Wandelt FLAC, M4A, WAV, OGG, WMA und andere Audiodateien in MP3 um. Vorher wird jede Datei geprüft: Hat sie ein bewegtes Bild, ist sie ein Video und bleibt liegen. Ein eingebettetes Cover zählt nicht als Video. Tags und Cover werden übernommen. Das Werkzeug hängt nicht an den drei Schritten und lässt sich jederzeit auf jeden Ordner anwenden."))
+        form = ttk.Frame(page)
+        form.pack(fill="x")
+        form.columnconfigure(1, weight=1)
+        ttk.Label(form, text=t("Ordner:")).grid(row=0, column=0, sticky="w", padx=(0, 8), pady=3)
+        ttk.Entry(form, textvariable=self.convert_folder).grid(row=0, column=1, sticky="ew", pady=3)
+        ttk.Button(form, text=t("Auswählen ..."), command=self._choose_convert_folder).grid(row=0, column=2, padx=(6, 0))
+        ttk.Label(form, text=t("Leer lassen für die Sammlung oben. Unterordner werden mit umgewandelt."),
+                  style="Info.TLabel").grid(row=1, column=1, columnspan=2, sticky="w")
+        ttk.Label(form, text=t("Qualität:")).grid(row=2, column=0, sticky="w", padx=(0, 8), pady=(8, 3))
+        ttk.Combobox(form, textvariable=self.convert_quality, values=[t(label) for label in QUALITY_LABELS],
+                     state="readonly", width=50).grid(row=2, column=1, sticky="w", pady=(8, 3))
+        ttk.Checkbutton(form, text=t("Originale an ihrem Platz lassen"), variable=self.keep_originals).grid(
+            row=3, column=1, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Label(form, text=t("Ohne Häkchen wandern die Originale in den Ordner „{folder}“. Gelöscht wird nichts, und im Verlauf lässt sich alles zurücknehmen.", folder=convert.ORIGINALS),
+                  style="Info.TLabel", wraplength=600, justify="left").grid(row=4, column=1, columnspan=2, sticky="w")
+        self._actions(page, self._convert)
+
+    def _choose_convert_folder(self):
+        folder = filedialog.askdirectory(title=t("Ordner zum Umwandeln auswählen"))
+        if folder:
+            self.convert_folder.set(os.path.normpath(folder))
+
+    def _convert(self, apply):
+        folder = self.convert_folder.get().strip() or self.folder.get().strip()
+        if not folder:
+            messagebox.showinfo("Music Renamer", t("Bitte einen Ordner zum Umwandeln auswählen."))
+            return
+        self._save()
+        quality = next((v for k, v in QUALITY_LABELS.items() if t(k) == self.convert_quality.get()), "v0")
+        self.review_cancelled = False
+        self.live.write("")
+        self.live.write(f"===== {t('Nach MP3 umwandeln')}: {t('Ausführen') if apply else t('Vorschau')} – {folder} =====")
+        self._run_background(cli.cmd_convert, Namespace(dateien=[folder], apply=apply, review=self._ask_review,
+                                                        qualitaet=quality, originale_behalten=self.keep_originals.get()))
+
     @staticmethod
     def _level_label(pattern):
         """Zeigt bekannte Ebenen mit Namen, eigene Muster so, wie sie getippt wurden."""
@@ -425,6 +472,7 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
             state = t("Ausgeführt am {date}", date=when) if when else t("Noch nicht ausgeführt")
             self.nav_texts[key].set(f"{number}. {t(STEP_NAMES[key])}\n     {state}")
         self.nav_texts[QUICK].set(f"{t('Schnell umbenennen')}\n     {t('Ohne Sammlung')}")
+        self.nav_texts[CONVERT].set(f"{t('Nach MP3 umwandeln')}\n     {t('Jederzeit, jeder Ordner')}")
 
     def _mark_done(self, step, folder):
         key = system.fold(os.path.abspath(folder))
@@ -638,6 +686,10 @@ class App(tk.Tk, TkinterDnD.DnDWrapper):
                     "cover": self.cover.get(), "songtexte": self.lyrics.get(), "genres": self.unify_genres.get(),
                     "muster": self._pattern(), "dateiname": self.file_name.get().strip(),
                     "ordner_ebenen": self._folder_patterns(), "zielordner": self.target_folder.get().strip(),
+                    "umwandeln_ordner": self.convert_folder.get().strip(),
+                    "umwandeln_qualitaet": next((v for k, v in QUALITY_LABELS.items()
+                                                 if t(k) == self.convert_quality.get()), "v0"),
+                    "originale_behalten": self.keep_originals.get(),
                     "zeitraum_jahre": self._period_years(quiet=True) or cli.PERIOD_YEARS,
                     "sprache": i18n.LANGUAGES[self.language.get()], "status": self.status}
         save_settings(settings)

@@ -12,6 +12,7 @@ So benutzt du Music Renamer mit Fenster. Unter Windows, macOS und Linux sieht da
 - [Schritt 2: Metadaten ergänzen](#schritt-2-metadaten-ergänzen)
 - [Schritt 3: Dateien umbenennen und sortieren](#schritt-3-dateien-umbenennen-und-sortieren)
 - [Dateien ins Fenster ziehen](#dateien-ins-fenster-ziehen)
+- [Nach MP3 umwandeln](#nach-mp3-umwandeln)
 - [Tag-Editor](#tag-editor)
 - [Verlauf und Zurücknehmen](#verlauf-und-zurücknehmen)
 - [Große Sammlungen und schlechtes Internet](#große-sammlungen-und-schlechtes-internet)
@@ -265,6 +266,45 @@ Gut zu wissen:
 - Dateien, aus denen sich kein Interpret und Titel ableiten lässt, bleiben unverändert. Das betrifft zum Beispiel `track01.mp3` ohne Tags.
 - Unterordner gezogener Ordner zählen mit, ein Ordner `Dubletten` direkt darin wird ausgelassen.
 - Während ein anderer Schritt läuft, nimmt das Programm nichts an.
+
+## Nach MP3 umwandeln
+
+Ein eigenes Werkzeug, unabhängig von den drei Schritten. Du kannst es jederzeit auf jeden Ordner anwenden, vorher, nachher oder ganz ohne Sammlung. Es steht links unten unter **Nach MP3 umwandeln**.
+
+**Was umgewandelt wird:** FLAC, M4A, AAC, WAV, AIFF, OGG, Opus, WMA, APE, WavPack und weitere Audioformate. MP3-Dateien bleiben, wie sie sind.
+
+**Videos bleiben liegen.** Vor dem Umwandeln prüft das Programm jede Datei mit ffprobe:
+
+| Datei | Ergebnis |
+|---|---|
+| Nur Ton, auch mit eingebettetem Cover | wird umgewandelt |
+| Ton mit bewegtem Bild, etwa ein Musikvideo als MP4 | **Video, bleibt liegen** |
+| Datei ohne Tonspur | bleibt liegen |
+| Datei, die sich nicht lesen lässt | bleibt liegen |
+| Daneben liegt schon eine MP3 mit gleichem Namen | bleibt liegen |
+
+Ein Cover zählt nicht als Video, denn es ist ein einzelnes Bild. Ein Film besteht aus vielen Bildern. Deshalb wird eine M4A mit Cover umgewandelt und ein MP4-Video nicht, auch wenn beide auf `.mp4` enden könnten.
+
+**So gehst du vor:**
+
+1. Wähle oben bei **Ordner** den Ordner. Bleibt das Feld leer, nimmt das Programm die Sammlung. Unterordner werden mitgenommen.
+2. Wähle die **Qualität**. Standard ist die beste variable Bitrate (V0, etwa 245 kbit/s). Mit 192 kbit/s werden die Dateien kleiner.
+3. Klick **Prüfen und ausführen**. Die Prüfansicht zeigt alle Dateien, die umgewandelt werden. Was liegen bleibt, steht im Protokoll und im Bericht `umwandeln.csv`.
+4. Bestätige mit **Ausgewählte ausführen**.
+
+**Was mit den Dateien passiert:**
+
+- Die MP3 entsteht im selben Ordner mit demselben Namen, aus `Song.flac` wird `Song.mp3`.
+- Tags und Cover werden übernommen.
+- Jede MP3 wird nach dem Umwandeln geprüft. Ist sie kürzer als das Original, etwa weil der Datenträger voll war, wird sie verworfen und das Original bleibt unverändert.
+- Die Originale wandern in den Ordner **Originale vor dem Umwandeln**, mit denselben Unterordnern. Gelöscht wird nichts. Die drei Schritte lassen diesen Ordner aus, er zählt nicht zur Sammlung. Setzt du das Häkchen **Originale an ihrem Platz lassen**, bleiben sie neben der MP3 liegen.
+- Im **Verlauf** lässt sich alles zurücknehmen: Die Originale kommen zurück, die MP3 werden entfernt.
+
+**Gut zu wissen:**
+
+- Mehrere Dateien werden gleichzeitig umgewandelt, je nach Prozessor bis zu vier. Im **Live-Fenster** siehst du jede Datei, das Ergebnis der Prüfung und wie lange die Umwandlung gedauert hat.
+- Formate wie M4A, OGG oder WMA sind schon verlustbehaftet komprimiert. Eine MP3 daraus klingt nicht besser als das Original, sie ist nur einheitlich. Wandle verlustfreie Formate wie FLAC oder WAV am besten mit der höchsten Qualität um.
+- ffmpeg ist im Programm für Windows und macOS enthalten. Unter Linux installiert `apt` es mit dem Paket automatisch mit.
 
 ## Tag-Editor
 

@@ -18,6 +18,8 @@ from .i18n import t
 from .job import job
 from .tags import EXTENSIONS, open_audio, read_tags
 
+ORIGINALS = "Originale vor dem Umwandeln"  # wie convert.ORIGINALS, hier ohne Rückimport
+
 SCHEMA_VERSION = 4
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS files (
@@ -79,9 +81,9 @@ def find_audio(root, exclude=None):
     exclude = system.fold(os.path.abspath(exclude)) if exclude else None
     for folder, subdirs, names in os.walk(root):
         job.detail(t("Ordner: {path}", path=folder))
-        if exclude:
-            subdirs[:] = [d for d in subdirs if system.fold(
-                os.path.abspath(os.path.join(folder, d))) != exclude]
+        # Die Originale nach dem Umwandeln gehören nicht mehr zur Sammlung
+        subdirs[:] = [d for d in subdirs if d != ORIGINALS and (not exclude or system.fold(
+            os.path.abspath(os.path.join(folder, d))) != exclude)]
         for name in names:
             if name.lower().endswith(EXTENSIONS):
                 yield os.path.join(folder, name)

@@ -40,6 +40,7 @@ Gelöscht wird nie etwas: Dubletten werden nur verschoben, und jeder Schritt lä
 - **Metadaten ergänzen:** Interpret, Titel, Album, Album-Interpret, Jahr, Genre, Track- und CD-Nummer und Label aus [MusicBrainz](https://musicbrainz.org), der iTunes-Suche und optional [Discogs](https://www.discogs.com)
 - **Cover und Songtexte einbetten:** aus dem [Cover Art Archive](https://coverartarchive.org) und von [LRCLIB](https://lrclib.net)
 - **Genres zusammenfassen:** nach Schritt 2 eine Liste aller Genres mit Anzahl, zusammengehörige wie Dubstep und House fasst du per Klick zu einem Genre zusammen
+- **Nach MP3 umwandeln:** eigenes Werkzeug für FLAC, M4A, WAV, OGG, WMA und mehr. Videos wie MP4-Filme werden vorher erkannt und bleiben liegen, Tags und Cover werden übernommen
 - **Am Klang erkennen:** auch Dateien ohne Tags und ohne brauchbaren Namen, über [AcoustID](https://acoustid.org), ohne dass du etwas einrichten musst
 - **Umbenennen und sortieren:** nach frei wählbarem Muster, in bis zu vier Ordnerebenen in beliebiger Reihenfolge, etwa Genre, Interpret, Album, Jahr, Jahrzehnt, Zeitraum wie 1980 - 1984, Anfangsbuchstabe oder Label, auch mit eigenen Ordnernamen und in einen eigenen Zielordner
 - **Dateien ins Fenster ziehen:** direkt umbenennen, ohne Sammlung
@@ -66,6 +67,10 @@ music-renamer-cli genres ORDNER [--apply] [--zusammenfassen "GENRE, GENRE=ZIEL"]
 
 ```bash
 music-renamer-cli umbenennen ORDNER [--apply] [--muster "MUSTER"] [--zeitraum N] [--ziel ZIELORDNER]
+```
+
+```bash
+music-renamer-cli umwandeln ORDNER [--apply] [--qualitaet v0|320|256|192] [--originale-behalten]
 ```
 
 ```bash
@@ -104,4 +109,4 @@ Für ein Release `__version__` in `musicrenamer/__init__.py` erhöhen, committen
 
 ## Lizenz
 
-GPL-3.0, siehe [LICENSE](LICENSE). Enthält [mutagen](https://github.com/quodlibet/mutagen) (GPL-2.0-or-later), [tkinterdnd2](https://github.com/Eliav2/tkinterdnd2) (MIT) und [fpcalc](https://github.com/acoustid/chromaprint) (LGPL/MIT).
+GPL-3.0, siehe [LICENSE](LICENSE). Enthält [mutagen](https://github.com/quodlibet/mutagen) (GPL-2.0-or-later), [tkinterdnd2](https://github.com/Eliav2/tkinterdnd2) (MIT) und [fpcalc](https://github.com/acoustid/chromaprint) (LGPL/MIT). Die Pakete für Windows und macOS enthalten [FFmpeg](https://ffmpeg.org) (GPL) aus [ffmpeg-static](https://github.com/eugeneware/ffmpeg-static); Lizenz und Bezugsquelle des Quelltexts stehen in `ffmpeg-LICENSE.txt` im Programmordner.

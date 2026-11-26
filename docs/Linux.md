@@ -44,33 +44,33 @@ Lade die passende Datei von der [Release-Seite](https://github.com/phillhf/music
 Fenster-Version:
 
 ```bash
-wget https://github.com/phillhf/music-renamer/releases/download/v0.21.0/music-renamer_0.21.0_amd64.deb
+wget https://github.com/phillhf/music-renamer/releases/download/v0.22.0/music-renamer_0.22.0_amd64.deb
 ```
 
 ```bash
-sudo apt install ./music-renamer_0.21.0_amd64.deb
+sudo apt install ./music-renamer_0.22.0_amd64.deb
 ```
 
 Befehlszeile:
 
 ```bash
-wget https://github.com/phillhf/music-renamer/releases/download/v0.21.0/music-renamer-cli_0.21.0_amd64.deb
+wget https://github.com/phillhf/music-renamer/releases/download/v0.22.0/music-renamer-cli_0.22.0_amd64.deb
 ```
 
 ```bash
-sudo apt install ./music-renamer-cli_0.21.0_amd64.deb
+sudo apt install ./music-renamer-cli_0.22.0_amd64.deb
 ```
 
 **Wichtig:** Das `./` vor dem Dateinamen muss sein, sonst sucht `apt` im Internet nach dem Paket. Nutze `apt`, nicht `dpkg -i`, denn nur `apt` installiert die nötigen Abhängigkeiten mit.
 
 Die Meldung, der Download werde „ohne Sandbox“ ausgeführt, kannst du ignorieren.
 
-Die Klangerkennung `fpcalc` ist in den `amd64`-Paketen enthalten. Für `arm64` installiert `apt` automatisch `libchromaprint-tools` mit.
+Die Klangerkennung `fpcalc` ist in den `amd64`-Paketen enthalten. Für `arm64` installiert `apt` automatisch `libchromaprint-tools` mit. ffmpeg für **Nach MP3 umwandeln** kommt ebenfalls automatisch mit, wenn du `apt` nicht ausdrücklich ohne empfohlene Pakete aufrufst.
 
 Zur Kontrolle kannst du die Prüfsumme vergleichen. Lade dafür auch die Datei `.deb.sha256` und starte im selben Ordner:
 
 ```bash
-sha256sum -c music-renamer_0.21.0_amd64.deb.sha256
+sha256sum -c music-renamer_0.22.0_amd64.deb.sha256
 ```
 
 ## Erster Start mit Fenster
@@ -166,6 +166,7 @@ rm -r ~/".local/share/Music Renamer"
 | Ziehen ins Fenster geht nicht | Unter Wayland hängt das am Desktop und ist nicht getestet. Nutze Schritt 3 oder melde dich zum Vergleich in einer X11-Sitzung an |
 | Kein Fenster, `no display name` | Es gibt keine grafische Sitzung, zum Beispiel per SSH. Nutze `music-renamer-cli` |
 | Klangerkennung fehlt auf `arm64` | Installiere sie mit `sudo apt install libchromaprint-tools` |
+| „Zum Umwandeln fehlt ffmpeg“ | Installiere es mit `sudo apt install ffmpeg` |
 | Abspielen in der Prüfansicht geht nicht | Lege im Dateimanager einen Standard-Player für den Dateityp fest |
 
 Weitere Hilfe findest du in der [Bedienungsanleitung](Bedienung.md#wenn-etwas-nicht-klappt). Fehler kannst du auf [GitHub melden](https://github.com/phillhf/music-renamer/issues).
