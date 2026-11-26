@@ -25,8 +25,8 @@ freeze() {
 freeze --name music-renamer --collect-all tkinterdnd2 app.py
 freeze --name music-renamer-cli --exclude-module tkinter --exclude-module tkinterdnd2 cli_app.py
 
-package() {  # Paketname, Depends, Recommends, Kurzbeschreibung; legt Zusatzdateien vorher nach build/deb/<Paket>
-    local name=$1 depends=$2 recommends=$3 summary=$4
+package() {  # Paketname, Depends, Recommends, Suggests, Kurzbeschreibung; Zusatzdateien vorher nach build/deb/<Paket>
+    local name=$1 depends=$2 recommends=$3 suggests=$4 summary=$5
     local root="build/deb/$name"
     mkdir -p "$root/DEBIAN" "$root/opt" "$root/usr/bin" "$root/usr/share/doc/$name"
     cp -R "build/linux/$name" "$root/opt/$name"
@@ -43,6 +43,7 @@ EOF
         echo "Installed-Size: $(du -sk "$root" | cut -f1)"
         echo "Depends: $depends"
         [ -z "$recommends" ] || echo "Recommends: $recommends"
+        [ -z "$suggests" ] || echo "Suggests: $suggests"
         echo "Section: sound"
         echo "Priority: optional"
         echo "Homepage: https://github.com/phillhf/music-renamer"
@@ -73,8 +74,9 @@ Categories=AudioVideo;Audio;
 StartupWMClass=Music-renamer
 EOF
 
-# ffmpeg kommt unter Linux vom System; apt installiert empfohlene Pakete von selbst mit
+# ffmpeg kommt unter Linux vom System; apt installiert empfohlene Pakete von selbst mit.
+# Die Befehlszeile schlägt es nur vor: Debians ffmpeg zieht Grafikbibliotheken nach, sie soll ohne auskommen.
 package music-renamer "ca-certificates, xdg-utils, fonts-dejavu-core" \
-    "${recommends:+$recommends, }ffmpeg, pkexec | policykit-1" "Musiksammlung aufraeumen"
-package music-renamer-cli "ca-certificates" "${recommends:+$recommends, }ffmpeg" "Musiksammlung aufraeumen, Befehlszeile"
+    "${recommends:+$recommends, }ffmpeg, pkexec | policykit-1" "" "Musiksammlung aufraeumen"
+package music-renamer-cli "ca-certificates" "$recommends" "ffmpeg" "Musiksammlung aufraeumen, Befehlszeile"
 ls -lh dist/*.deb

@@ -24,6 +24,14 @@ test -d "$HOME/.local/share/Music Renamer"
 
 apt-get install -y -qq /pakete/music-renamer_*"_$arch.deb" xvfb xauth imagemagick > /dev/null
 test -f /usr/share/applications/music-renamer.desktop
+# ffmpeg kommt als empfohlenes Paket mit: echte Umwandlung, ein Video bleibt liegen
+command -v ffmpeg > /dev/null
+mkdir -p /tmp/umwandeln
+ffmpeg -v error -y -f lavfi -i "sine=duration=3" /tmp/umwandeln/ton.flac
+ffmpeg -v error -y -f lavfi -i "sine=duration=3" -f lavfi -i "testsrc=duration=3" -shortest /tmp/umwandeln/film.mp4
+music-renamer-cli umwandeln /tmp/umwandeln --apply
+test -f /tmp/umwandeln/ton.mp3
+test ! -e /tmp/umwandeln/film.mp3
 xvfb-run -a music-renamer --selftest
 xvfb-run -a -s "-screen 0 1000x800x24" sh -c '
     music-renamer & pid=$!

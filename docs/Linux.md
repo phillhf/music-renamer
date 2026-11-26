@@ -44,33 +44,33 @@ Lade die passende Datei von der [Release-Seite](https://github.com/phillhf/music
 Fenster-Version:
 
 ```bash
-wget https://github.com/phillhf/music-renamer/releases/download/v0.22.0/music-renamer_0.22.0_amd64.deb
+wget https://github.com/phillhf/music-renamer/releases/download/v0.22.1/music-renamer_0.22.1_amd64.deb
 ```
 
 ```bash
-sudo apt install ./music-renamer_0.22.0_amd64.deb
+sudo apt install ./music-renamer_0.22.1_amd64.deb
 ```
 
 Befehlszeile:
 
 ```bash
-wget https://github.com/phillhf/music-renamer/releases/download/v0.22.0/music-renamer-cli_0.22.0_amd64.deb
+wget https://github.com/phillhf/music-renamer/releases/download/v0.22.1/music-renamer-cli_0.22.1_amd64.deb
 ```
 
 ```bash
-sudo apt install ./music-renamer-cli_0.22.0_amd64.deb
+sudo apt install ./music-renamer-cli_0.22.1_amd64.deb
 ```
 
 **Wichtig:** Das `./` vor dem Dateinamen muss sein, sonst sucht `apt` im Internet nach dem Paket. Nutze `apt`, nicht `dpkg -i`, denn nur `apt` installiert die nötigen Abhängigkeiten mit.
 
 Die Meldung, der Download werde „ohne Sandbox“ ausgeführt, kannst du ignorieren.
 
-Die Klangerkennung `fpcalc` ist in den `amd64`-Paketen enthalten. Für `arm64` installiert `apt` automatisch `libchromaprint-tools` mit. ffmpeg für **Nach MP3 umwandeln** kommt ebenfalls automatisch mit, wenn du `apt` nicht ausdrücklich ohne empfohlene Pakete aufrufst.
+Die Klangerkennung `fpcalc` ist in den `amd64`-Paketen enthalten. Für `arm64` installiert `apt` automatisch `libchromaprint-tools` mit. ffmpeg für **Nach MP3 umwandeln** kommt mit dem Fenster-Paket automatisch mit, wenn du `apt` nicht ausdrücklich ohne empfohlene Pakete aufrufst. Das Paket nur mit der Befehlszeile installiert es nicht von selbst, weil ffmpeg unter Debian Grafikbibliotheken nachzieht. Brauchst du dort `umwandeln`, installiere es mit `sudo apt install ffmpeg`.
 
 Zur Kontrolle kannst du die Prüfsumme vergleichen. Lade dafür auch die Datei `.deb.sha256` und starte im selben Ordner:
 
 ```bash
-sha256sum -c music-renamer_0.22.0_amd64.deb.sha256
+sha256sum -c music-renamer_0.22.1_amd64.deb.sha256
 ```
 
 ## Erster Start mit Fenster
